@@ -1,46 +1,21 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Circlo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
   body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #f6fbff, #eef5ff, #f7f9ff);
-    color: #0b1f3a;
-    overflow-x: hidden;
-  }
-
-  /* NEON GREEN BACKGROUND GLOW (very subtle) */
-  body::before {
-    content: "";
-    position: fixed;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(0,255,170,0.12), transparent 60%);
-    top: -200px;
-    left: -200px;
-    filter: blur(60px);
-    z-index: -1;
-  }
-
-  body::after {
-    content: "";
-    position: fixed;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(0,180,255,0.12), transparent 60%);
-    bottom: -150px;
-    right: -150px;
-    filter: blur(60px);
-    z-index: -1;
+    background: #f4f6f9;
+    color: #111;
   }
 
   header {
-    background: rgba(10, 25, 50, 0.95);
+    background: #0b1f3a;
     color: white;
     padding: 25px;
     text-align: center;
@@ -48,115 +23,62 @@
 
   header h1 {
     margin: 0;
-    font-size: 28px;
-    letter-spacing: 1px;
+    font-size: 30px;
   }
 
   header p {
     margin: 5px 0 0;
+    color: #cfe3ff;
     font-size: 13px;
-    color: #cfe8ff;
   }
 
   .container {
     max-width: 900px;
     margin: 50px auto;
-    padding: 20px;
     text-align: center;
+    padding: 20px;
   }
 
   .card {
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(12px);
-    border-radius: 16px;
+    background: white;
     padding: 35px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-    border: 1px solid rgba(255,255,255,0.5);
-  }
-
-  h2 {
-    margin-top: 0;
-    color: #0b1f3a;
-  }
-
-  p {
-    color: #3a4f66;
-  }
-
-  .buttons {
-    margin-top: 20px;
+    border-radius: 14px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
   }
 
   .btn {
     padding: 12px 18px;
     margin: 8px;
-    border-radius: 10px;
+    border-radius: 8px;
     border: none;
     cursor: pointer;
-    font-size: 14px;
-    transition: 0.2s ease;
   }
 
   .primary {
-    background: linear-gradient(135deg, #1d4ed8, #3aa8ff);
+    background: #1d4ed8;
     color: white;
-  }
-
-  .primary:hover {
-    transform: translateY(-2px);
   }
 
   .secondary {
     background: white;
-    border: 1px solid #3aa8ff;
+    border: 1px solid #1d4ed8;
     color: #1d4ed8;
   }
 
-  .secondary:hover {
-    background: #eaf4ff;
-  }
-
-  .dark {
-    background: #0b1f3a;
-    color: white;
-  }
-
-  .dark:hover {
-    background: #122c4d;
-  }
-
-  .features {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 35px;
-  }
-
-  .feature {
-    width: 220px;
-    padding: 15px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.6);
-    border: 1px solid rgba(255,255,255,0.4);
-  }
-
-  .feature h3 {
-    margin: 0;
-    font-size: 15px;
-    color: #0b1f3a;
-  }
-
-  .feature p {
-    font-size: 13px;
-    color: #4a5f77;
-  }
-
-  footer {
-    text-align: center;
-    padding: 40px;
+  .small-links {
+    margin-top: 15px;
     font-size: 12px;
-    color: #5a6f86;
+    color: #666;
+  }
+
+  .small-links a {
+    margin: 0 10px;
+    color: #555;
+    text-decoration: none;
+  }
+
+  .small-links a:hover {
+    text-decoration: underline;
   }
 
 </style>
@@ -165,47 +87,30 @@
 <body>
 
 <header>
-  <h1>👥 Circlo</h1>
-  <p>Connessioni basate su interessi reali, non algoritmi casuali</p>
+  <h1>Circlo</h1>
+  <p>Connessioni basate su interessi condivisi</p>
 </header>
 
 <div class="container">
 
   <div class="card">
-    <h2>Entra nello spazio Circlo</h2>
+
+    <h2>Benvenuto su Circlo</h2>
     <p>
-      Scopri persone nella tua città che condividono musica, idee e interessi simili ai tuoi.
+      Uno spazio per incontrare persone compatibili nella tua area universitaria e sociale.
     </p>
 
-    <div class="buttons">
-      <button class="btn primary">Accedi</button>
-      <button class="btn secondary">Registrati</button>
-      <button class="btn dark">Esplora</button>
-    </div>
-  </div>
+    <button class="btn primary">Accedi</button>
+    <button class="btn secondary">Registrati (18+)</button>
 
-  <div class="features">
-    <div class="feature">
-      <h3>🎧 Interessi</h3>
-      <p>Persone con passioni comuni</p>
+    <div class="small-links">
+      <a href="#">Progetto Circlo</a>
+      <a href="mailto:info@circlo.it">Contatti</a>
     </div>
 
-    <div class="feature">
-      <h3>📍 Locale</h3>
-      <p>Connessioni nella tua area</p>
-    </div>
-
-    <div class="feature">
-      <h3>🌐 Neutro</h3>
-      <p>Nessun feed caotico o rumore</p>
-    </div>
   </div>
 
 </div>
-
-<footer>
-  Circlo — prototype social platform
-</footer>
 
 </body>
 </html>
