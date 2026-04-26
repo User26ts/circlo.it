@@ -1,29 +1,29 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Circlo</title>
 
 <style>
   body {
     margin: 0;
     font-family: Arial, sans-serif;
-    color: #0b1f2a;
-    background: linear-gradient(135deg, #dff6ff, #f5fbff, #e6f0ff);
+    background: linear-gradient(135deg, #f6fbff, #eef5ff, #f7f9ff);
+    color: #0b1f3a;
     overflow-x: hidden;
   }
 
-  /* soft ambient glow */
+  /* NEON GREEN BACKGROUND GLOW (very subtle) */
   body::before {
     content: "";
     position: fixed;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(120,200,255,0.25), transparent 60%);
+    background: radial-gradient(circle, rgba(0,255,170,0.12), transparent 60%);
     top: -200px;
     left: -200px;
-    filter: blur(40px);
+    filter: blur(60px);
     z-index: -1;
   }
 
@@ -32,46 +32,62 @@
     position: fixed;
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, rgba(180,220,255,0.25), transparent 60%);
+    background: radial-gradient(circle, rgba(0,180,255,0.12), transparent 60%);
     bottom: -150px;
     right: -150px;
-    filter: blur(50px);
+    filter: blur(60px);
     z-index: -1;
   }
 
   header {
+    background: rgba(10, 25, 50, 0.95);
+    color: white;
+    padding: 25px;
     text-align: center;
-    padding: 60px 20px 30px;
   }
 
-  h1 {
-    font-size: 42px;
+  header h1 {
     margin: 0;
+    font-size: 28px;
     letter-spacing: 1px;
-    color: #0b2a4a;
   }
 
   header p {
-    color: #2a4a66;
-    margin-top: 10px;
+    margin: 5px 0 0;
+    font-size: 13px;
+    color: #cfe8ff;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 50px auto;
+    padding: 20px;
+    text-align: center;
   }
 
   .card {
-    max-width: 850px;
-    margin: 0 auto;
-    background: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.75);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 18px;
+    border-radius: 16px;
     padding: 35px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+
+  h2 {
+    margin-top: 0;
+    color: #0b1f3a;
+  }
+
+  p {
+    color: #3a4f66;
   }
 
   .buttons {
     margin-top: 20px;
   }
 
-  button {
+  .btn {
     padding: 12px 18px;
     margin: 8px;
     border-radius: 10px;
@@ -82,7 +98,7 @@
   }
 
   .primary {
-    background: linear-gradient(135deg, #3aa8ff, #6bc1ff);
+    background: linear-gradient(135deg, #1d4ed8, #3aa8ff);
     color: white;
   }
 
@@ -91,58 +107,56 @@
   }
 
   .secondary {
-    background: rgba(255,255,255,0.8);
-    border: 1px solid #7fbfff;
-    color: #1b4f72;
+    background: white;
+    border: 1px solid #3aa8ff;
+    color: #1d4ed8;
   }
 
   .secondary:hover {
-    background: rgba(220,240,255,0.9);
+    background: #eaf4ff;
   }
 
-  .ghost {
-    background: transparent;
-    border: 1px solid rgba(0,0,0,0.2);
-    color: #0b2a4a;
+  .dark {
+    background: #0b1f3a;
+    color: white;
   }
 
-  .ghost:hover {
-    background: rgba(255,255,255,0.4);
+  .dark:hover {
+    background: #122c4d;
   }
 
   .features {
     display: flex;
     gap: 15px;
-    flex-wrap: wrap;
     justify-content: center;
+    flex-wrap: wrap;
     margin-top: 35px;
   }
 
   .feature {
     width: 220px;
     padding: 15px;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.5);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.6);
     border: 1px solid rgba(255,255,255,0.4);
-    backdrop-filter: blur(10px);
   }
 
   .feature h3 {
     margin: 0;
     font-size: 15px;
-    color: #0b2a4a;
+    color: #0b1f3a;
   }
 
   .feature p {
     font-size: 13px;
-    color: #355a75;
+    color: #4a5f77;
   }
 
   footer {
     text-align: center;
     padding: 40px;
     font-size: 12px;
-    color: #4a6b86;
+    color: #5a6f86;
   }
 
 </style>
@@ -151,43 +165,46 @@
 <body>
 
 <header>
-  <h1>Circlo</h1>
-  <p>Persone che condividono interessi, nello stesso spazio reale</p>
+  <h1>👥 Circlo</h1>
+  <p>Connessioni basate su interessi reali, non algoritmi casuali</p>
 </header>
 
-<div class="card">
-  <h2>Accesso alla rete sociale</h2>
-  <p>
-    Circlo ti connette a persone vicine a te, basandosi su interessi reali,
-    non su algoritmi superficiali.
-  </p>
+<div class="container">
 
-  <div class="buttons">
-    <button class="primary">Accedi</button>
-    <button class="secondary">Registrati</button>
-    <button class="ghost">Esplora</button>
+  <div class="card">
+    <h2>Entra nello spazio Circlo</h2>
+    <p>
+      Scopri persone nella tua città che condividono musica, idee e interessi simili ai tuoi.
+    </p>
+
+    <div class="buttons">
+      <button class="btn primary">Accedi</button>
+      <button class="btn secondary">Registrati</button>
+      <button class="btn dark">Esplora</button>
+    </div>
   </div>
 
   <div class="features">
     <div class="feature">
-      <h3>Interessi</h3>
-      <p>Trova persone con passioni comuni</p>
+      <h3>🎧 Interessi</h3>
+      <p>Persone con passioni comuni</p>
     </div>
 
     <div class="feature">
-      <h3>Vicino a te</h3>
-      <p>Connessioni geolocalizzate</p>
+      <h3>📍 Locale</h3>
+      <p>Connessioni nella tua area</p>
     </div>
 
     <div class="feature">
-      <h3>Spazio neutro</h3>
-      <p>Nessun feed caotico, solo persone</p>
+      <h3>🌐 Neutro</h3>
+      <p>Nessun feed caotico o rumore</p>
     </div>
   </div>
+
 </div>
 
 <footer>
-  Circlo — early concept prototype
+  Circlo — prototype social platform
 </footer>
 
 </body>
