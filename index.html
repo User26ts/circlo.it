@@ -1,15 +1,181 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Circlo</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      color: #111;
+    }
+
+    /* HEADER */
+    header {
+      background: #0b1f3a;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+
+    header p {
+      margin: 5px 0 0;
+      color: #cfe3ff;
+      font-size: 14px;
+    }
+
+    /* MAIN CONTAINER */
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #0b1f3a;
+    }
+
+    p {
+      color: #444;
+    }
+
+    /* BUTTONS */
+    .btn {
+      padding: 12px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.2s;
+    }
+
+    .btn-primary {
+      background: #1d4ed8;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: white;
+      border: 2px solid #1d4ed8;
+      color: #1d4ed8;
+    }
+
+    .btn-secondary:hover {
+      background: #eaf1ff;
+    }
+
+    .btn-dark {
+      background: #111827;
+      color: white;
+    }
+
+    .btn-dark:hover {
+      background: #1f2937;
+    }
+
+    /* FEATURE BOXES */
+    .features {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .feature {
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 10px;
+      width: 200px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    .feature h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #0b1f3a;
+    }
+
+    .feature p {
+      font-size: 13px;
+      color: #666;
+    }
+
+    /* FOOTER */
+    footer {
+      margin-top: 50px;
+      padding: 20px;
+      text-align: center;
+      color: #777;
+      font-size: 13px;
+    }
+
+  </style>
 </head>
-<body style="font-family: Arial; text-align:center; padding:50px;">
+
+<body>
+
+<header>
   <h1>👥 Circlo</h1>
   <p>Scopri persone con interessi comuni nella tua città</p>
+</header>
 
-  <button onclick="alert('Benvenuto su Circlo 🚀')">
-    Entra
-  </button>
+<div class="container">
+
+  <div class="card">
+    <h2>Benvenuto su Circlo</h2>
+    <p>Connettiti con persone che condividono le tue passioni, musica, sport, cultura e molto altro.</p>
+
+    <button class="btn btn-primary">🔐 Accedi</button>
+    <button class="btn btn-secondary">📝 Registrati</button>
+    <button class="btn btn-dark">🌍 Esplora senza account</button>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <h3>🎧 Interessi</h3>
+      <p>Trova persone con gusti simili ai tuoi</p>
+    </div>
+
+    <div class="feature">
+      <h3>📍 Vicino a te</h3>
+      <p>Scopri utenti nella tua città</p>
+    </div>
+
+    <div class="feature">
+      <h3>💬 Connessioni</h3>
+      <p>Chat e interazioni semplici</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  © 2026 Circlo - Social per interessi condivisi
+</footer>
+
 </body>
 </html>
