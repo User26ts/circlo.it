@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { useState } from "react";
 
 // --- CONFIGURAZIONE (Inserisci i tuoi dati qui sotto) ---
-const SUPABASE_URL = "INCOLLA_QUI_IL_TUO_URL"; 
-const SUPABASE_ANON_KEY = "INCOLLA_QUI_LA_TUA_ANON_KEY";
+const SUPABASE_URL = "https://cuntsizxhdoenlmldkrp.supabase.co"; 
+const SUPABASE_ANON_KEY = "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK";
 // -------------------------------------------------------
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
