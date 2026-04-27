@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -21,24 +20,24 @@ export default function AuthPage() {
     setError("");
 
     try {
-      let res;
+      let result;
 
       if (mode === "signup") {
-        res = await supabase.auth.signUp({
+        result = await supabase.auth.signUp({
           email,
           password,
         });
       } else {
-        res = await supabase.auth.signInWithPassword({
+        result = await supabase.auth.signInWithPassword({
           email,
           password,
         });
       }
 
-      console.log("AUTH RESPONSE:", res);
+      console.log("AUTH RESULT:", result);
 
-      if (res.error) {
-        setError(res.error.message);
+      if (result.error) {
+        setError(result.error.message);
         return;
       }
 
