@@ -14,8 +14,15 @@ export default function AuthPage() {
   const [error, setError] = useState("");
 
 const handleAuth = async () => {
-  setLoading(true);
-  setError("");
+  console.log("CLICK FUNZIONA");
+
+  const res = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  console.log("FULL RESPONSE:", res);
+};
 
   try {
     const res = await supabase.auth.signUp({
