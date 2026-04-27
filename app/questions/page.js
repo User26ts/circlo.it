@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import supabase from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import supabase from "../lib/supabaseClient";
 
 export default function Questions() {
   const router = useRouter();
+
   const [selected, setSelected] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -26,19 +27,22 @@ export default function Questions() {
     setLoading(true);
     setError("");
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    const user = userData?.user;
-
-    if (!user) {
-      setError("Errore: utente non autenticato");
-      setLoading(false);
-      return;
-    }
-
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+
+      if (!user) throw new Error("Utente non autenticato");
+
       const entries = Object.entries(selected);
+
+      if (entries.length === 0) {
+        setError("Seleziona almeno un'opzione per continuare.");
+        setLoading(false);
+        return;
+      }
+
       for (let [category, value] of entries) {
-        if (!value) continue; // Salta se niente selezionato
+        if (!value) continue;
         const { error: insertError } = await supabase.from("answers").insert([
           { user_id: user.id, category, value },
         ]);
@@ -46,16 +50,17 @@ export default function Questions() {
       }
 
       router.push("/"); // Poi cambierai con la pagina di matchmaking
-    } catch (err) {
-      setError("Errore durante il salvataggio: " + err.message);
-    }
 
-    setLoading(false);
+    } catch (err) {
+      setError(err.message || "Errore sconosciuto durante il salvataggio");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderGroup = (title, items, category) => (
-    <div className="mb-6">
-      <h2 className="mb-2 text-lg">{title}</h2>
+    <div className="mb-6 w-full max-w-md">
+      <h2 className="mb-2 text-lg font-medium">{title}</h2>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
           <button
@@ -83,12 +88,12 @@ export default function Questions() {
       {renderGroup("Cibo", food, "food")}
       {renderGroup("Estetica", aesthetic, "aesthetic")}
 
-      {error && <p className="text-red-500 mt-3">{error}</p>}
+      {error && <p className="text-red-400 mt-3 mb-3">{error}</p>}
 
       <button
         onClick={saveAnswers}
         disabled={loading}
-        className="w-full mt-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition"
+        className="w-full max-w-md py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition"
       >
         {loading ? "Salvataggio..." : "Continua"}
       </button>
