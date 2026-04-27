@@ -10,7 +10,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState("login"); // login | signup
+  const [mode, setMode] = useState("login"); // "login" | "signup"
   const [error, setError] = useState("");
 
   const handleAuth = async () => {
@@ -18,37 +18,30 @@ export default function AuthPage() {
     setError("");
 
     try {
+      let res;
+
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) throw error;
+        res = await supabase.auth.signUp({ email, password });
+        if (res.error) throw res.error;
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
+        res = await supabase.auth.signInWithPassword({ email, password });
+        if (res.error) throw res.error;
       }
 
-      // se tutto ok → vai onboarding
-      router.push("/onboarding");
+      console.log("User:", res.data.user); // debug
+      router.push("/onboarding"); // vai alla pagina di onboarding
 
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError(err.message || "Errore sconosciuto");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#050814] text-white px-6">
-
       <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
-
         <h1 className="text-3xl mb-6 text-center font-light">
           {mode === "login" ? "Accedi a Circlo" : "Crea il tuo profilo"}
         </h1>
@@ -89,15 +82,12 @@ export default function AuthPage() {
 
         <p
           className="text-sm text-center text-gray-400 cursor-pointer"
-          onClick={() =>
-            setMode(mode === "login" ? "signup" : "login")
-          }
+          onClick={() => setMode(mode === "login" ? "signup" : "login")}
         >
           {mode === "login"
             ? "Non hai un account? Registrati"
             : "Hai già un account? Accedi"}
         </p>
-
       </div>
     </main>
   );
