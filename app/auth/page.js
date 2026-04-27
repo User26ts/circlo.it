@@ -10,56 +10,32 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [mode, setMode] = useState("login");
   const [error, setError] = useState("");
 
-const handleAuth = async () => {
-  console.log("CLICK FUNZIONA");
+  const handleAuth = async () => {
+    setLoading(true);
+    setError("");
 
-  const res = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  console.log("FULL RESPONSE:", res);
-};
-
-  try {
-    const res = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    console.log("SIGNUP:", res);
-
-    if (res.error) {
-      setError(res.error.message);
-      return;
-    }
-
-    router.push("/onboarding");
-  } catch (err) {
-    console.error(err);
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-  
     try {
+      console.log("CLICK FUNZIONA");
+
       let res;
 
       if (mode === "signup") {
         res = await supabase.auth.signUp({ email, password });
-        if (res.error) throw res.error;
       } else {
         res = await supabase.auth.signInWithPassword({ email, password });
-        if (res.error) throw res.error;
       }
 
-      console.log("User:", res.data.user); // debug
-      router.push("/onboarding"); // vai alla pagina di onboarding
+      console.log("FULL RESPONSE:", res);
 
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
+      router.push("/onboarding");
     } catch (err) {
       console.error(err);
       setError(err.message || "Errore sconosciuto");
@@ -71,6 +47,7 @@ const handleAuth = async () => {
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#050814] text-white px-6">
       <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
+
         <h1 className="text-3xl mb-6 text-center font-light">
           {mode === "login" ? "Accedi a Circlo" : "Crea il tuo profilo"}
         </h1>
@@ -92,9 +69,7 @@ const handleAuth = async () => {
         />
 
         {error && (
-          <p className="text-red-400 text-sm mb-3">
-            {error}
-          </p>
+          <p className="text-red-400 text-sm mb-3">{error}</p>
         )}
 
         <button
@@ -117,6 +92,7 @@ const handleAuth = async () => {
             ? "Non hai un account? Registrati"
             : "Hai già un account? Accedi"}
         </p>
+
       </div>
     </main>
   );
