@@ -26,51 +26,53 @@ export default function Onboarding() {
 
       if (!user) throw new Error("Utente non autenticato");
 
+      if (!name || !surname || !gender || !age || !location) {
+        throw new Error("Compila tutti i campi");
+      }
+
       const { error } = await supabase.from("profiles").insert([
         {
           id: user.id,
           name,
           surname,
           gender,
-          age: parseInt(age),
+          age: Number(age),
           location,
         },
       ]);
 
       if (error) throw error;
 
-      router.push("/questions");
+      router.push("/questions"); // vai alla pagina delle domande
 
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Errore sconosciuto");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 bg-[#050814] text-white">
-
-      <div className="bg-white/5 p-8 rounded-2xl w-full max-w-md">
-
-        <h2 className="text-xl mb-6">Dati base</h2>
+      <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
+        <h2 className="text-xl mb-6 text-center font-light">Dati base</h2>
 
         <input
-          className="w-full p-3 mb-3 bg-black/40 rounded"
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
           placeholder="Nome"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
         <input
-          className="w-full p-3 mb-3 bg-black/40 rounded"
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
           placeholder="Cognome"
           value={surname}
           onChange={(e) => setSurname(e.target.value)}
         />
 
         <select
-          className="w-full p-3 mb-3 bg-black/40 rounded"
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
           value={gender}
           onChange={(e) => setGender(e.target.value)}
         >
@@ -81,34 +83,30 @@ export default function Onboarding() {
         </select>
 
         <input
-          className="w-full p-3 mb-3 bg-black/40 rounded"
-          placeholder="Età"
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
           type="number"
+          placeholder="Età"
           value={age}
           onChange={(e) => setAge(e.target.value)}
         />
 
         <input
-          className="w-full p-3 mb-3 bg-black/40 rounded"
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
           placeholder="Città"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
         />
 
-        {error && (
-          <p className="text-red-400 text-sm mb-3">{error}</p>
-        )}
+        {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
         <button
           onClick={saveProfile}
           disabled={loading}
-          className="w-full py-3 bg-blue-600 rounded"
+          className="w-full py-3 bg-blue-600 rounded-xl hover:scale-[1.02] transition"
         >
           {loading ? "Salvataggio..." : "Continua"}
         </button>
-
       </div>
-
     </main>
   );
 }
