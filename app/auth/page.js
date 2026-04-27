@@ -1,14 +1,17 @@
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-// Questo percorso sale di due cartelle ed entra in src/lib
-import supabase from "../../src/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js"; // Importiamo direttamente la libreria
+
+// --- MOTORE SUPABASE INTEGRATO ---
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// ---------------------------------
 
 export default function AuthPage() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,41 +19,26 @@ export default function AuthPage() {
   const [error, setError] = useState("");
 
   const handleAuth = async () => {
-    console.log("Tentativo di autenticazione avviato...");
+    console.log("Il bottone è stato premuto!");
     setLoading(true);
     setError("");
 
     try {
       let result;
-
       if (mode === "signup") {
-        result = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (!result.error) {
-          alert("Registrazione avviata! Controlla la tua email per il link di conferma.");
-        }
+        result = await supabase.auth.signUp({ email, password });
+        if (!result.error) alert("Controlla l'email per confermare!");
       } else {
-        result = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        result = await supabase.auth.signInWithPassword({ email, password });
       }
-
-      console.log("Risultato:", result);
 
       if (result.error) {
         setError(result.error.message);
-        return;
-      }
-
-      if (result.data?.user) {
+      } else if (result.data?.user) {
         router.push("/onboarding");
       }
     } catch (err) {
-      console.error("Errore imprevisto:", err);
-      setError("Si è verificato un errore di connessione.");
+      setError("Errore tecnico: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -79,9 +67,7 @@ export default function AuthPage() {
           className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10 text-white"
         />
 
-        {error && (
-          <p className="text-red-400 text-sm mb-3 bg-red-400/10 p-2 rounded">{error}</p>
-        )}
+        {error && <p className="text-red-400 text-sm mb-3 p-2 bg-red-900/20 rounded">{error}</p>}
 
         <button
           onClick={handleAuth}
@@ -92,12 +78,10 @@ export default function AuthPage() {
         </button>
 
         <p
-          className="text-sm text-center text-gray-400 cursor-pointer hover:text-white transition"
+          className="text-sm text-center text-gray-400 cursor-pointer"
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
         >
-          {mode === "login"
-            ? "Non hai un account? Registrati"
-            : "Hai già un account? Accedi"}
+          {mode === "login" ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
         </p>
       </div>
     </main>
