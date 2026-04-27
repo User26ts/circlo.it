@@ -1,8 +1,10 @@
+
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "../lib/supabaseClient";
+// Questo percorso sale di due cartelle ed entra in src/lib
+import supabase from "../../src/lib/supabaseClient";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -14,8 +16,7 @@ export default function AuthPage() {
   const [error, setError] = useState("");
 
   const handleAuth = async () => {
-    console.log("CLICK FUNZIONA");
-
+    console.log("Tentativo di autenticazione avviato...");
     setLoading(true);
     setError("");
 
@@ -27,6 +28,9 @@ export default function AuthPage() {
           email,
           password,
         });
+        if (!result.error) {
+          alert("Registrazione avviata! Controlla la tua email per il link di conferma.");
+        }
       } else {
         result = await supabase.auth.signInWithPassword({
           email,
@@ -34,17 +38,19 @@ export default function AuthPage() {
         });
       }
 
-      console.log("AUTH RESULT:", result);
+      console.log("Risultato:", result);
 
       if (result.error) {
         setError(result.error.message);
         return;
       }
 
-      router.push("/onboarding");
+      if (result.data?.user) {
+        router.push("/onboarding");
+      }
     } catch (err) {
-      console.error(err);
-      setError(err.message || "Errore sconosciuto");
+      console.error("Errore imprevisto:", err);
+      setError("Si è verificato un errore di connessione.");
     } finally {
       setLoading(false);
     }
@@ -52,9 +58,7 @@ export default function AuthPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#050814] text-white px-6">
-
       <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
-
         <h1 className="text-3xl mb-6 text-center font-light">
           {mode === "login" ? "Accedi a Circlo" : "Crea il tuo profilo"}
         </h1>
@@ -64,7 +68,7 @@ export default function AuthPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10 text-white"
         />
 
         <input
@@ -72,36 +76,29 @@ export default function AuthPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10 text-white"
         />
 
         {error && (
-          <p className="text-red-400 text-sm mb-3">{error}</p>
+          <p className="text-red-400 text-sm mb-3 bg-red-400/10 p-2 rounded">{error}</p>
         )}
 
         <button
           onClick={handleAuth}
           disabled={loading}
-          className="w-full bg-blue-600 py-3 rounded-xl hover:scale-[1.02] transition mb-4"
+          className="w-full bg-blue-600 py-3 rounded-xl hover:scale-[1.02] transition mb-4 disabled:opacity-50"
         >
-          {loading
-            ? "Caricamento..."
-            : mode === "login"
-              ? "Accedi"
-              : "Registrati"}
+          {loading ? "Caricamento..." : mode === "login" ? "Accedi" : "Registrati"}
         </button>
 
         <p
-          className="text-sm text-center text-gray-400 cursor-pointer"
-          onClick={() =>
-            setMode(mode === "login" ? "signup" : "login")
-          }
+          className="text-sm text-center text-gray-400 cursor-pointer hover:text-white transition"
+          onClick={() => setMode(mode === "login" ? "signup" : "login")}
         >
           {mode === "login"
             ? "Non hai un account? Registrati"
             : "Hai già un account? Accedi"}
         </p>
-
       </div>
     </main>
   );
