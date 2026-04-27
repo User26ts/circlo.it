@@ -13,10 +13,32 @@ export default function AuthPage() {
   const [mode, setMode] = useState("login"); // "login" | "signup"
   const [error, setError] = useState("");
 
-  const handleAuth = async () => {
-    setLoading(true);
-    setError("");
+const handleAuth = async () => {
+  setLoading(true);
+  setError("");
 
+  try {
+    const res = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    console.log("SIGNUP:", res);
+
+    if (res.error) {
+      setError(res.error.message);
+      return;
+    }
+
+    router.push("/onboarding");
+  } catch (err) {
+    console.error(err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+  
     try {
       let res;
 
