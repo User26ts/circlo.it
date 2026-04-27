@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -14,7 +15,7 @@ export default function AuthPage() {
   const [error, setError] = useState("");
 
   const handleAuth = async () => {
-    alert("CLICK FUNZIONA"); // 👈 TEST IMPORTANTE
+    console.log("CLICK FUNZIONA");
 
     setLoading(true);
     setError("");
@@ -34,7 +35,7 @@ export default function AuthPage() {
         });
       }
 
-      console.log("FULL RESPONSE:", res);
+      console.log("AUTH RESPONSE:", res);
 
       if (res.error) {
         setError(res.error.message);
@@ -52,6 +53,7 @@ export default function AuthPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#050814] text-white px-6">
+
       <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
 
         <h1 className="text-3xl mb-6 text-center font-light">
@@ -59,19 +61,19 @@ export default function AuthPage() {
         </h1>
 
         <input
-          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
         />
 
         <input
-          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
           type="password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
         />
 
         {error && (
@@ -92,7 +94,9 @@ export default function AuthPage() {
 
         <p
           className="text-sm text-center text-gray-400 cursor-pointer"
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
+          onClick={() =>
+            setMode(mode === "login" ? "signup" : "login")
+          }
         >
           {mode === "login"
             ? "Non hai un account? Registrati"
