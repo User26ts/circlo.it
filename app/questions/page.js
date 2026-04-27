@@ -14,6 +14,7 @@ export default function Questions() {
 
   const [selected, setSelected] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const toggle = (category, value) => {
     setSelected((prev) => ({
@@ -24,32 +25,50 @@ export default function Questions() {
 
   const saveAnswers = async () => {
     setLoading(true);
+    setError("");
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
 
-    if (!user) return;
+      if (!user) {
+        throw new Error("Utente non autenticato");
+      }
 
-    const entries = Object.entries(selected);
+      const entries = Object.entries(selected);
 
-    for (let [category, value] of entries) {
-      await supabase.from("answers").insert([
-        {
-          user_id: user.id,
-          category,
-          value,
-        },
-      ]);
+      if (entries.length === 0) {
+        throw new Error("Seleziona almeno un'opzione");
+      }
+
+      // salva tutte le risposte
+      for (let [category, value] of entries) {
+        await supabase.from("answers").insert([
+          {
+            user_id: user.id,
+            category,
+            value,
+          },
+        ]);
+      }
+
+      // reset stato (pulito)
+      setSelected({});
+
+      // vai avanti
+      router.push("/matches");
+
+    } catch (err) {
+      setError(err.message);
     }
-
-    router.push("/"); // poi sarà matchmaking
 
     setLoading(false);
   };
 
   const renderGroup = (title, items, category) => (
     <div className="mb-6">
-      <h2 className="mb-2 text-lg">{title}</h2>
+      <h2 className="mb-2 text-lg font-light">{title}</h2>
+
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
           <button
@@ -79,6 +98,12 @@ export default function Questions() {
       {renderGroup("Hobby", hobby, "hobby")}
       {renderGroup("Cibo", food, "food")}
       {renderGroup("Estetica", aesthetic, "aesthetic")}
+
+      {error && (
+        <p className="text-red-400 text-sm text-center mb-3">
+          {error}
+        </p>
+      )}
 
       <button
         onClick={saveAnswers}
