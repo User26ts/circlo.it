@@ -1,6 +1,5 @@
-import supabase from '../lib/supabaseClient'
-
 "use client";
+
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -15,7 +14,7 @@ export default function Home() {
 
       <p className="text-gray-300 max-w-xl italic mb-10">
         Le persone si avvicinano prima dei nomi.<br />
-        Qui vieni riconosciuto da ciò che scegli, non da ciò che mostri.
+        Qui non vieni scelto per ciò che mostri, ma attraversato per ciò che condividi.
       </p>
 
       <div className="flex gap-4">
