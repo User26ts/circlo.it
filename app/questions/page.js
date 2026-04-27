@@ -6,57 +6,66 @@ import { useRouter } from "next/navigation";
 
 export default function Questions() {
   const router = useRouter();
+  const [selected, setSelected] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Liste di domande
   const music = ["Rock", "Pop", "Hip Hop", "Jazz", "Techno", "Indie", "Classica", "Reggaeton", "Metal", "Lo-fi"];
   const hobby = ["Cinema", "Sport", "Gaming", "Fotografia", "Viaggi", "Lettura", "Disegno", "Cucina", "Fitness", "Musica"];
   const food = ["Pizza", "Sushi", "Pasta", "Burger", "Tacos", "Dolci", "Vegano", "Piccante", "Street food", "Italiano"];
   const aesthetic = ["Dreamcore", "Brutalismo", "Minimal", "Dark academia", "Y2K", "Cyberpunk", "Vintage", "Cartoon", "Softcore", "Grunge"];
 
-  // Stato delle selezioni
-  const [selected, setSelected] = useState({
-    music: null,
-    hobby: null,
-    food: null,
-    aesthetic: null,
-  });
-
-  const [loading, setLoading] = useState(false);
-
-  // Funzione per selezionare un'opzione
   const toggle = (category, value) => {
-    setSelected(prev => ({ ...prev, [category]: value }));
+    setSelected((prev) => ({
+      ...prev,
+      [category]: prev[category] === value ? "" : value,
+    }));
   };
 
-  // Salva risposte nel database
   const saveAnswers = async () => {
     setLoading(true);
+    setError("");
 
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
     const user = userData?.user;
-    if (!user) return alert("Utente non trovato!");
 
-    for (const [category, value] of Object.entries(selected)) {
-      if (value) {
-        await supabase.from("answers").insert([{ user_id: user.id, category, value }]);
+    if (!user) {
+      setError("Errore: utente non autenticato");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const entries = Object.entries(selected);
+      for (let [category, value] of entries) {
+        if (!value) continue; // Salta se niente selezionato
+        const { error: insertError } = await supabase.from("answers").insert([
+          { user_id: user.id, category, value },
+        ]);
+        if (insertError) throw insertError;
       }
+
+      router.push("/"); // Poi cambierai con la pagina di matchmaking
+    } catch (err) {
+      setError("Errore durante il salvataggio: " + err.message);
     }
 
     setLoading(false);
-    router.push("/"); // Qui poi metti matchmaking
   };
 
-  // Genera il gruppo di bottoni per una categoria
   const renderGroup = (title, items, category) => (
     <div className="mb-6">
-      <h2 className="mb-2 text-lg font-semibold">{title}</h2>
+      <h2 className="mb-2 text-lg">{title}</h2>
       <div className="flex flex-wrap gap-2">
-        {items.map(item => (
+        {items.map((item) => (
           <button
             key={item}
             onClick={() => toggle(category, item)}
-            className={`px-3 py-1 rounded-full border text-sm transition 
-              ${selected[category] === item ? "bg-blue-600 border-blue-600" : "border-white/30"}`}
+            className={`px-3 py-1 rounded-full border text-sm transition ${
+              selected[category] === item
+                ? "bg-blue-600 border-blue-600"
+                : "border-white/20"
+            }`}
           >
             {item}
           </button>
@@ -74,10 +83,12 @@ export default function Questions() {
       {renderGroup("Cibo", food, "food")}
       {renderGroup("Estetica", aesthetic, "aesthetic")}
 
+      {error && <p className="text-red-500 mt-3">{error}</p>}
+
       <button
         onClick={saveAnswers}
         disabled={loading}
-        className="w-full max-w-md mt-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition"
+        className="w-full mt-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition"
       >
         {loading ? "Salvataggio..." : "Continua"}
       </button>
