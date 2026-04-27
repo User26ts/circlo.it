@@ -1,33 +1,97 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 
-export default function Auth() {
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import supabase from "../lib/supabaseClient";
+
+export default function AuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState("login");
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState("login"); // login | signup
+  const [error, setError] = useState("");
+
+  const handleAuth = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+      }
+
+      // se tutto ok → vai onboarding
+      router.push("/onboarding");
+
+    } catch (err) {
+      setError(err.message);
+    }
+
+    setLoading(false);
+  };
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 bg-[#050814] text-white">
+    <main className="min-h-screen flex items-center justify-center bg-[#050814] text-white px-6">
 
-      <div className="bg-white/5 p-8 rounded-2xl w-full max-w-md backdrop-blur">
+      <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
 
-        <h2 className="text-2xl mb-6 text-center">
-          {mode === "login" ? "Accedi" : "Registrati"}
-        </h2>
+        <h1 className="text-3xl mb-6 text-center font-light">
+          {mode === "login" ? "Accedi a Circlo" : "Crea il tuo profilo"}
+        </h1>
 
-        <input className="w-full p-3 mb-3 rounded bg-black/40" placeholder="Email" />
-        <input className="w-full p-3 mb-3 rounded bg-black/40" placeholder="Password" type="password" />
+        <input
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        {error && (
+          <p className="text-red-400 text-sm mb-3">
+            {error}
+          </p>
+        )}
 
         <button
-          onClick={() => router.push("/onboarding")}
-          className="w-full py-3 bg-blue-600 rounded mt-2"
+          onClick={handleAuth}
+          disabled={loading}
+          className="w-full bg-blue-600 py-3 rounded-xl hover:scale-[1.02] transition mb-4"
         >
-          Continua
+          {loading
+            ? "Caricamento..."
+            : mode === "login"
+              ? "Accedi"
+              : "Registrati"}
         </button>
 
         <p
-          onClick={() => setMode(mode === "login" ? "register" : "login")}
-          className="text-xs text-center mt-4 text-gray-400 cursor-pointer"
+          className="text-sm text-center text-gray-400 cursor-pointer"
+          onClick={() =>
+            setMode(mode === "login" ? "signup" : "login")
+          }
         >
           {mode === "login"
             ? "Non hai un account? Registrati"
@@ -35,7 +99,6 @@ export default function Auth() {
         </p>
 
       </div>
-
     </main>
   );
 }
