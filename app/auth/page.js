@@ -14,18 +14,24 @@ export default function AuthPage() {
   const [error, setError] = useState("");
 
   const handleAuth = async () => {
+    alert("CLICK FUNZIONA"); // 👈 TEST IMPORTANTE
+
     setLoading(true);
     setError("");
 
     try {
-      console.log("CLICK FUNZIONA");
-
       let res;
 
       if (mode === "signup") {
-        res = await supabase.auth.signUp({ email, password });
+        res = await supabase.auth.signUp({
+          email,
+          password,
+        });
       } else {
-        res = await supabase.auth.signInWithPassword({ email, password });
+        res = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
       }
 
       console.log("FULL RESPONSE:", res);
