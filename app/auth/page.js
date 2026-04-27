@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 // --- INSERISCI QUI I TUOI DATI REALI ---
-const URL_DIRETTO = "INCOLLA_QUI_IL_TUO_URL_SUPABASE";
-const KEY_DIRETTA = "INCOLLA_QUI_LA_TUA_ANON_KEY";
+const URL_DIRETTO = "https://cuntsizxhdoenlmldkrp.supabase.co";
+const KEY_DIRETTA = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1bnRzaXp4aGRvZW5sbWxka3JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzQyNDEsImV4cCI6MjA5MjgxMDI0MX0.mFDUuwMMcrVJj6QJkTJHLTT8mJXet51yp5jxzONIS9I";
 // --------------------------------------
 
 const supabase = createClient(URL_DIRETTO, KEY_DIRETTA);
