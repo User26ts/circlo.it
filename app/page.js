@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import supabase from "../../src/lib/supabaseClient";
 
 export default function Home() {
   const router = useRouter();
