@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js"; // Importiamo direttamente la libreria
-
-// --- MOTORE SUPABASE INTEGRATO ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-// ---------------------------------
+import supabase from "../../src/lib/supabaseClient";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -16,29 +10,25 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("login");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-  const handleAuth = async () => {
-    console.log("Il bottone è stato premuto!");
+  const handleAuth = async (e) => {
+    e.preventDefault(); // Impedisce alla pagina di ricaricarsi
     setLoading(true);
-    setError("");
+    setMessage("");
 
     try {
-      let result;
       if (mode === "signup") {
-        result = await supabase.auth.signUp({ email, password });
-        if (!result.error) alert("Controlla l'email per confermare!");
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        alert("Registrazione riuscita! Controlla la tua email per confermare.");
       } else {
-        result = await supabase.auth.signInWithPassword({ email, password });
-      }
-
-      if (result.error) {
-        setError(result.error.message);
-      } else if (result.data?.user) {
-        router.push("/onboarding");
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        router.push("/onboarding"); // Ti manda avanti se il login è ok
       }
     } catch (err) {
-      setError("Errore tecnico: " + err.message);
+      setMessage(err.message);
     } finally {
       setLoading(false);
     }
@@ -51,34 +41,42 @@ export default function AuthPage() {
           {mode === "login" ? "Accedi a Circlo" : "Crea il tuo profilo"}
         </h1>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10 text-white"
-        />
+        <form onSubmit={handleAuth} className="flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="Email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-white outline-none focus:border-blue-500"
+          />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-3 p-3 rounded bg-black/40 border border-white/10 text-white"
-        />
+          <input
+            type="password"
+            placeholder="Password (min. 6 caratteri)"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-white outline-none focus:border-blue-500"
+          />
 
-        {error && <p className="text-red-400 text-sm mb-3 p-2 bg-red-900/20 rounded">{error}</p>}
+          {message && (
+            <p className="text-red-400 text-sm bg-red-400/10 p-2 rounded text-center">
+              {message}
+            </p>
+          )}
 
-        <button
-          onClick={handleAuth}
-          disabled={loading}
-          className="w-full bg-blue-600 py-3 rounded-xl hover:scale-[1.02] transition mb-4 disabled:opacity-50"
-        >
-          {loading ? "Caricamento..." : mode === "login" ? "Accedi" : "Registrati"}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 py-3 rounded-xl hover:bg-blue-700 transition disabled:opacity-50"
+          >
+            {loading ? "Caricamento..." : mode === "login" ? "Accedi" : "Registrati"}
+          </button>
+        </form>
 
         <p
-          className="text-sm text-center text-gray-400 cursor-pointer"
+          className="mt-6 text-sm text-center text-gray-400 cursor-pointer hover:text-white transition"
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
         >
           {mode === "login" ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
