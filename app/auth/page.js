@@ -2,8 +2,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 // --- METTI QUI I DATI DEL NUOVO PROGETTO SUPABASE ---
-const URL_DIRETTO = "INCOLLA_QUI_IL_NUOVO_URL";
-const KEY_DIRETTA = "INCOLLA_QUI_LA_NUOVA_ANON_KEY";
+const URL_DIRETTO = "https://cuntsizxhdoenlmldkrp.supabase.co";
+const KEY_DIRETTA = "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK";
 // --------------------------------------------------
 
 const supabase = createClient(URL_DIRETTO, KEY_DIRETTA);
