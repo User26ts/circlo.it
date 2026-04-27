@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -12,29 +12,39 @@ export default function AuthPage() {
   const [mode, setMode] = useState("login");
   const [message, setMessage] = useState("");
 
-  // Creazione interna per evitare errori di importazione
+  // Creazione client ultra-sicura
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   );
 
   const handleAuth = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Questo è fondamentale per non far ricaricare la pagina
     setLoading(true);
-    setMessage("Sincronizzazione con il database...");
+    setMessage("Comunicazione con Circlo in corso...");
 
     try {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        throw new Error("Le chiavi del database non sono state caricate su Vercel!");
+      }
+
+      let result;
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        setMessage("Registrazione inviata! Controlla la tua email.");
+        result = await supabase.auth.signUp({ email, password });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        result = await supabase.auth.signInWithPassword({ email, password });
+      }
+
+      if (result.error) throw result.error;
+
+      if (mode === "signup") {
+        setMessage("Registrazione quasi completata! CONTROLLA LA MAIL (anche in SPAM) per confermare.");
+      } else {
         router.push("/onboarding");
       }
     } catch (err) {
-      setMessage("Errore: " + err.message);
+      console.error(err);
+      setMessage("ERRORE: " + err.message); // Qui DEVE apparire l'errore a schermo
     } finally {
       setLoading(false);
     }
@@ -44,7 +54,7 @@ export default function AuthPage() {
     <main className="min-h-screen flex items-center justify-center bg-[#050814] text-white px-6">
       <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
         <h1 className="text-3xl mb-6 text-center font-light">
-          {mode === "login" ? "Accedi" : "Registrati"}
+          {mode === "login" ? "Entra in Circlo" : "Unisciti a Circlo"}
         </h1>
 
         <form onSubmit={handleAuth} className="flex flex-col gap-4">
@@ -52,37 +62,39 @@ export default function AuthPage() {
             type="email"
             placeholder="Email"
             required
+            value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 rounded bg-black/40 border border-white/10"
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-white"
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Password (min. 6 caratteri)"
             required
+            value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 rounded bg-black/40 border border-white/10"
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-white"
           />
-          
+
           {message && (
-            <p className="text-sm bg-blue-500/20 p-3 rounded text-center border border-blue-500/50">
+            <div className="p-3 rounded text-center text-sm border bg-blue-500/10 border-blue-500 text-blue-200">
               {message}
-            </p>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 py-3 rounded-xl hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-blue-600 py-3 rounded-xl hover:bg-blue-700 transition disabled:opacity-50 font-medium"
           >
-            {loading ? "Attendi..." : mode === "login" ? "Entra" : "Crea Account"}
+            {loading ? "Elaborazione..." : mode === "login" ? "Accedi" : "Crea Account"}
           </button>
         </form>
 
         <p
-          className="mt-6 text-center text-gray-400 cursor-pointer underline"
+          className="mt-6 text-center text-gray-400 cursor-pointer hover:text-white transition text-sm"
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
         >
-          {mode === "login" ? "Passa a Registrazione" : "Passa a Login"}
+          {mode === "login" ? "Non hai un account? Registrati qui" : "Hai già un profilo? Accedi"}
         </p>
       </div>
     </main>
