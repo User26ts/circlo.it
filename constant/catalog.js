@@ -1,42 +1,35 @@
 export const AFFINITY_CATALOG = {
   musica: {
     classica: {
-      barocca: ["Bach", "Vivaldi", "Handel", "Scarlatti", "Corelli", "Purcell"],
-      romantica: ["Chopin", "Rachmaninov", "Liszt", "Beethoven", "Schubert", "Brahms", "Tchaikovsky"],
-      modernismo: ["Stravinsky", "Debussy", "Ravel", "Mahler", "Shostakovich"],
-      contemporanea: ["Einaudi", "Max Richter", "Philip Glass", "Jóhannsson"]
+      barocca: ["Bach", "Vivaldi", "Handel", "Scarlatti", "Corelli", "Purcell", "Monteverdi"],
+      romantica: ["Chopin", "Rachmaninov", "Liszt", "Beethoven", "Schubert", "Brahms", "Tchaikovsky", "Mendelssohn", "Mahler"],
+      moderna: ["Stravinsky", "Debussy", "Ravel", "Shostakovich", "Prokofiev", "Bartók"],
+      minimalista: ["Einaudi", "Max Richter", "Philip Glass", "Jóhannsson", "Steve Reich"]
     },
-    urban_pop: {
-      trap_it: ["Sfera Ebbasta", "Lazza", "Marracash", "Guè", "Tedua", "Tony Effe", "Anna"],
-      rap_usa: ["Travis Scott", "Drake", "Kendrick Lamar", "Kanye West", "Playboi Carti"],
-      pop: ["Taylor Swift", "Ariana Grande", "The Weeknd", "Harry Styles", "Billie Eilish"]
-    },
-    techno_rave: {
-      hard_techno: ["Klangkuenstler", "Kobosil", "Sara Landry", "999999999"],
-      melodic: ["Anyma", "Tale of Us", "Solomun", "Artbat"]
+    contemporanea: {
+      trap_it: ["Sfera Ebbasta", "Lazza", "Marracash", "Guè", "Tedua", "Tony Effe", "Anna", "Shiva", "Capo Plaza"],
+      urban_usa: ["Travis Scott", "Drake", "Kendrick Lamar", "Kanye West", "Playboi Carti", "21 Savage", "Tyler, The Creator"],
+      pop_stars: ["Taylor Swift", "Ariana Grande", "The Weeknd", "Harry Styles", "Billie Eilish", "Lana Del Rey", "Dua Lipa"],
+      techno_berlin: ["Klangkuenstler", "Kobosil", "Sara Landry", "999999999", "Ben Klock", "Amelie Lens"]
     }
   },
-  scienze_e_sapere: {
-    scienze_pure: ["Matematica Pura", "Fisica Teorica", "Astrofisica", "Chimica Organica", "Biologia Molecolare"],
-    ingegneria: ["Meccanica", "Aerospaziale", "Informatica/AI", "Robotica", "Bioingegneria"],
-    umanistiche: ["Psicologia Clinica", "Sociologia", "Antropologia", "Archeologia", "Linguistica"]
+  scienze_e_tecnica: {
+    pure: ["Matematica Pura", "Fisica Teorica", "Astrofisica", "Chimica Quantistica", "Biologia Molecolare", "Neuroscienze"],
+    ingegneria: ["Meccanica", "Aerospaziale", "Robotica", "Intelligenza Artificiale", "Bioingegneria", "Energia Nucleare"],
+    terra: ["Geologia", "Meteorologia", "Ecologia", "Scienze dei Materiali"]
   },
-  filosofia_e_letteratura: {
-    correnti: ["Esistenzialismo", "Stoicismo", "Nihilismo", "Idealismo", "Fenomenologia", "Epicureismo"],
-    letteratura: ["Classici Greci/Latini", "Romanticismo", "Decadentismo", "Realismo Magico", "Poesia Moderna"],
-    autori_culto: ["Nietzsche", "Kafka", "Dostoevskij", "Pessoa", "Camus", "Orwell", "Hesse"]
+  filosofia_e_cultura: {
+    correnti: ["Stoicismo", "Esistenzialismo", "Nichilismo", "Idealismo", "Fenomenologia", "Epicureismo", "Cinismo"],
+    pensatori: ["Nietzsche", "Kafka", "Dostoevskij", "Pessoa", "Camus", "Sartre", "Heidegger", "Schopenhauer"],
+    letteratura: ["Classici Greci", "Poesia Maledetta", "Realismo Magico", "Distopia", "Cyberpunk Narrative"]
   },
-  estetica_vibe: {
-    cores: ["Dreamcore", "Frutiger Aero", "Vaporwave", "Liminal Spaces", "Cyberpunk", "Weirdcore"],
-    stili: ["Old Money", "Dark Academia", "Cottagecore", "Minimalismo", "Streetwear", "Grunge"]
+  cibo_e_lifestyle: {
+    cucina: ["Giapponese (Sushi/Ramen)", "Italiana Regionale", "Messicana", "Coreana", "Mediorientale", "Viking/Wild Food"],
+    vibe: ["Fine Dining", "Street Food", "Vini Naturali", "Mixology", "Caffè Specialty", "Pasticceria Molecolare"]
   },
-  cibo_e_gusto: {
-    cucine: ["Italiana (Tradizionale)", "Giapponese/Sushi", "Fusion", "Messicana", "Coreana", "Mediterranea"],
-    esperienze: ["Fine Dining", "Street Food", "Vini Naturali", "Mixology", "Pasticceria Tecnica"]
-  },
-  sport_e_corpo: {
-    agonismo: ["Calcio", "Basket", "Tennis", "Padel", "Volley", "Nuoto"],
-    outdoor: ["Arrampicata", "Surf", "Skateboarding", "Sci/Snowboard", "Trekking"],
-    mind_body: ["Bodybuilding", "Crossfit", "Yoga", "Pilates", "Arti Marziali"]
+  sport_e_movimento: {
+    outdoor: ["Arrampicata", "Surf", "Skateboarding", "Snowboard", "Trekking", "Diving"],
+    palestra: ["Bodybuilding", "Powerlifting", "Crossfit", "Calisthenics", "Yoga", "Pilates"],
+    classici: ["Tennis", "Padel", "Basket", "Calcio", "Volley", "Nuoto"]
   }
 };
