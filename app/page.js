@@ -1,84 +1,114 @@
 "use client";
-import Link from 'next/link';
 
-export default function Home() {
-  return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#000000', // Nero assoluto per profondità
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: '-apple-system, system-ui, sans-serif',
-      color: 'white',
-      padding: '20px',
-    }}>
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+// --- CONFIGURAZIONE DIRETTA (Sostituisci con i tuoi dati) ---
+const SUPABASE_URL = "INCOLLA_QUI_IL_TUO_URL";
+const SUPABASE_ANON_KEY = "INCOLLA_QUI_LA_TUA_ANON_KEY";
+// -----------------------------------------------------------
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+export default function AuthPage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState("login");
+  const [error, setError] = useState("");
+
+  const handleAuth = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      let result;
+
+      if (mode === "signup") {
+        result = await supabase.auth.signUp({
+          email,
+          password,
+        });
+      } else {
+        result = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+      }
+
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+
+      // Se il login o signup funziona, vai all'onboarding
+      router.push("/_onboarding"); 
+      // NOTA: Ho messo il trattino basso perché avevamo rinominato la cartella prima. 
+      // Se la ripristinerai, togli il trattino.
       
-      {/* Container Centrale */}
-      <div style={{
-        textAlign: 'center',
-        width: '100%',
-        maxWidth: '400px',
-      }}>
-        {/* Logo Originale */}
-        <h1 style={{ 
-          fontSize: '3.5rem', 
-          fontWeight: '900', 
-          letterSpacing: '-1.5px',
-          marginBottom: '8px',
-          color: '#ffffff'
-        }}>
-          circlo.
-        </h1>
+    } catch (err) {
+      setError(err.message || "Errore sconosciuto");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-[#050814] text-white px-6 font-sans">
+      
+      <div className="w-full max-w-md bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur">
         
-        {/* Sottotitolo discreto */}
-        <p style={{ 
-          fontSize: '1.1rem', 
-          opacity: 0.5,
-          fontWeight: '400',
-          marginBottom: '60px'
-        }}>
-          Affinità, non apparenze.
+        <h1 className="text-3xl mb-6 text-center font-light tracking-tight">
+          {mode === "login" ? "Accedi a Circlo" : "Crea il tuo profilo"}
+        </h1>
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full mb-3 p-3 rounded-xl bg-black/40 border border-white/10 focus:outline-none focus:border-blue-500 transition"
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full mb-3 p-3 rounded-xl bg-black/40 border border-white/10 focus:outline-none focus:border-blue-500 transition"
+        />
+
+        {error && (
+          <p className="text-red-400 text-sm mb-3 bg-red-400/10 p-2 rounded text-center">{error}</p>
+        )}
+
+        <button
+          onClick={handleAuth}
+          disabled={loading}
+          className="w-full bg-blue-600 py-3 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition mb-4 font-semibold shadow-lg shadow-blue-600/20"
+        >
+          {loading
+            ? "Caricamento..."
+            : mode === "login"
+              ? "Accedi"
+              : "Registrati"}
+        </button>
+
+        <p
+          className="text-sm text-center text-gray-400 cursor-pointer hover:text-white transition"
+          onClick={() =>
+            setMode(mode === "login" ? "signup" : "login")
+          }
+        >
+          {mode === "login"
+            ? "Non hai un account? Registrati"
+            : "Hai già un account? Accedi"}
         </p>
 
-        {/* Bottone OG - Pulito e diretto */}
-        <Link href="/auth" style={{
-          display: 'block',
-          width: '100%',
-          padding: '20px',
-          backgroundColor: '#3b82f6', // Il blu elettrico originale
-          color: 'white',
-          borderRadius: '16px',
-          textDecoration: 'none',
-          fontSize: '1.1rem',
-          fontWeight: '600',
-          transition: 'transform 0.2s ease',
-          boxShadow: '0 4px 20px rgba(59, 130, 246, 0.3)',
-        }}>
-          Entra nel cerchio
-        </Link>
       </div>
-
-      {/* La frase "Filosofica" - Posizionata in basso come nota a margine */}
-      <div style={{ 
-        position: 'absolute', 
-        bottom: '50px', 
-        width: '100%',
-        textAlign: 'center',
-        padding: '0 30px',
-      }}>
-        <p style={{ 
-          fontSize: '0.85rem', 
-          lineHeight: '1.6', 
-          opacity: 0.3, // Molto sottile
-          maxWidth: '450px',
-          margin: '0 auto',
-          fontWeight: '300'
-        }}>
-          Le connessioni autentiche non sbocciano tra le apparenze, ma nel riverbero delle proprie affinità.
-        </p>
-      </div>
-    </div>
+    </main>
   );
 }
