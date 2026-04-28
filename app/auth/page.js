@@ -1,113 +1,89 @@
 "use client";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { useState } from "react";
 
-// --- CONFIGURAZIONE (Inserisci i tuoi dati qui sotto) ---
-const SUPABASE_URL = "https://cuntsizxhdoenlmldkrp.supabase.co"; 
-const SUPABASE_ANON_KEY = "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK";
-// -------------------------------------------------------
+const supabase = createClient("TUO_URL", "TUA_KEY");
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-export default function AuthPage() {
+function AuthContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messaggio, setMessaggio] = useState({ testo: "", tipo: "" });
+  const [error, setError] = useState("");
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
+  // Legge l'URL (?mode=signup) per impostare la pagina
+  useEffect(() => {
+    const m = searchParams.get("mode");
+    if (m === "signup" || m === "login") setMode(m);
+  }, [searchParams]);
+
+  const handleAuth = async () => {
     setLoading(true);
-    setMessaggio({ testo: "", tipo: "" });
-
+    setError("");
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { error: authError } = mode === "signup" 
+        ? await supabase.auth.signUp({ email, password })
+        : await supabase.auth.signInWithPassword({ email, password });
 
-      if (error) throw error;
-      setMessaggio({ testo: "Registrazione OK! Controlla la mail per confermare.", tipo: "success" });
+      if (authError) throw authError;
+      router.push("/onboarding");
     } catch (err) {
-      setMessaggio({ testo: err.message, tipo: "error" });
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      backgroundColor: '#050814',
-      color: 'white',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'system-ui, sans-serif',
-      padding: '20px'
-    }}>
-      <div style={{
-        backgroundColor: '#0f172a',
-        padding: '40px',
-        borderRadius: '24px',
-        width: '100%',
-        maxWidth: '400px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-        border: '1px solid #1e293b'
-      }}>
-        <h1 style={{ color: '#3b82f6', textAlign: 'center', marginBottom: '10px' }}>CIRCLO</h1>
-        <p style={{ textAlign: 'center', opacity: 0.6, marginBottom: '30px' }}>Test Connessione V3</p>
+    <main style={styles.main}>
+      <div style={styles.glassCard}>
+        <h2 style={styles.title}>{mode === "login" ? "Accedi" : "Registrati"}</h2>
+        <input 
+          type="email" placeholder="Email" value={email}
+          onChange={(e) => setEmail(e.target.value)} style={styles.input} 
+        />
+        <input 
+          type="password" placeholder="Password" value={password}
+          onChange={(e) => setPassword(e.target.value)} style={styles.input} 
+        />
+        {error && <p style={styles.error}>{error}</p>}
+        
+        <button onClick={handleAuth} disabled={loading} style={styles.button}>
+          <span style={styles.gloss}></span>
+          {loading ? "Attendi..." : (mode === "login" ? "Entra" : "Crea account")}
+        </button>
 
-        <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#020617', color: 'white' }}
-          />
-          <input
-            type="password"
-            placeholder="Password (min. 6 caratteri)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#020617', color: 'white' }}
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: '14px',
-              borderRadius: '12px',
-              border: 'none',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              fontWeight: 'bold',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              marginTop: '10px'
-            }}
-          >
-            {loading ? "Caricamento..." : "REGISTRATI ORA"}
-          </button>
-        </form>
-
-        {messaggio.testo && (
-          <div style={{
-            marginTop: '20px',
-            padding: '12px',
-            borderRadius: '8px',
-            textAlign: 'center',
-            backgroundColor: messaggio.tipo === 'error' ? '#7f1d1d' : '#064e3b',
-            color: messaggio.tipo === 'error' ? '#fecaca' : '#d1fae5',
-            fontSize: '14px'
-          }}>
-            {messaggio.testo}
-          </div>
-        )}
+        <p onClick={() => setMode(mode === "login" ? "signup" : "login")} style={styles.switch}>
+          {mode === "login" ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
+        </p>
       </div>
-    </div>
+    </main>
   );
 }
+
+// Next.js richiede Suspense per usare useSearchParams
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div>Caricamento...</div>}>
+      <AuthContent />
+    </Suspense>
+  );
+}
+
+const styles = {
+  main: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4f8' },
+  glassCard: { background: 'white', padding: '40px', borderRadius: '30px', width: '100%', maxWidth: '350px', textAlign: 'center', boxShadow: '0 15px 35px rgba(0,0,0,0.05)' },
+  title: { fontWeight: '300', marginBottom: '30px', color: '#334155' },
+  input: { width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box' },
+  button: { 
+    width: '100%', padding: '14px', background: '#2563eb', color: 'white', border: 'none', 
+    borderRadius: '12px', fontWeight: '700', cursor: 'pointer', position: 'relative', overflow: 'hidden' 
+  },
+  gloss: { position: 'absolute', top: '2px', left: '10%', width: '80%', height: '35%', background: 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%)', borderRadius: '10px' },
+  switch: { marginTop: '20px', fontSize: '13px', color: '#64748b', cursor: 'pointer' },
+  error: { color: 'red', fontSize: '12px', marginBottom: '10px' }
+};
