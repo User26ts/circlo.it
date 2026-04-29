@@ -9,120 +9,150 @@ export default function Discovery() {
   const [matches, setMatches] = useState([]);
   const [myCity, setMyCity] = useState("");
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
   const router = useRouter();
+
+  // Funzione antiproiettile per calcolare l'età (gestisce valori vuoti o date non valide)
+  const calculateAge = (dateString) => {
+    if (!dateString) return "Età N.D.";
+    
+    const birthDate = new Date(dateString);
+    if (isNaN(birthDate.getTime())) return "Età N.D."; // Se la data salvata è corrotta
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   useEffect(() => {
     async function getMatches() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push("/");
+          return;
+        }
 
-      // 1. Recupero il mio profilo (interessi e provincia)
-      const { data: me } = await supabase
-        .from('profiles')
-        .select('city, affinity_data')
-        .eq('id', user.id)
-        .single();
-      
-      if (!me) return;
-      setMyCity(me.city);
-      const myInterests = me.affinity_data?.interests || [];
+        // 1. Prendo i miei dati
+        const { data: me, error: meError } = await supabase
+          .from('profiles')
+          .select('city, affinity_data')
+          .eq('id', session.user.id)
+          .single();
 
-      // 2. Cerco ALTRE persone della STESSA provincia
-      const { data: others } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('city', me.city)
-        .neq('id', user.id);
+        if (meError) throw new Error("Profilo non trovato. Completa l'onboarding.");
+        if (!me.city) {
+          router.push("/onboarding");
+          return;
+        }
 
-      // 3. Algoritmo di Affinità
-      const rankedMatches = others.map(other => {
-        const otherInterests = other.affinity_data?.interests || [];
-        const common = myInterests.filter(tag => otherInterests.includes(tag));
-        
-        return {
-          ...other,
-          score: common.length,
-          common: common
-        };
-      })
-      .filter(m => m.score > 0) // Mostro solo chi ha almeno una passione in comune
-      .sort((a, b) => b.score - a.score); // Dal più affine al meno affine
+        setMyCity(me.city);
+        const myInterests = Array.isArray(me.affinity_data?.interests) ? me.affinity_data.interests : [];
 
-      setMatches(rankedMatches);
-      setLoading(false);
+        // 2. Prendo le altre persone nella mia città
+        const { data: others, error: othersError } = await supabase
+          .from('profiles')
+          .select('id, birth_date, affinity_data')
+          .eq('city', me.city)
+          .neq('id', session.user.id);
+
+        if (othersError) throw othersError;
+
+        // 3. Calcolo l'affinità (Score) e formatto i dati
+        const ranked = others.map(person => {
+          const theirInterests = Array.isArray(person.affinity_data?.interests) ? person.affinity_data.interests : [];
+          
+          // Trovo gli interessi in comune
+          const common = myInterests.filter(tag => theirInterests.includes(tag));
+          
+          return { 
+            id: person.id,
+            age: calculateAge(person.birth_date),
+            score: common.length, 
+            commonTags: common 
+          };
+        })
+        .filter(match => match.score > 0) // Mostro solo chi ha almeno 1 interesse in comune
+        .sort((a, b) => b.score - a.score); // Ordino dal più affine al meno affine
+
+        setMatches(ranked);
+      } catch (err) {
+        console.error("Errore Discovery:", err);
+        setErrorMsg(err.message || "Impossibile caricare le affinità.");
+      } finally {
+        setLoading(false);
+      }
     }
-
     getMatches();
-  }, []);
+  }, [router]);
 
   const startChat = async (targetUserId) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Controlla se esiste già una stanza
-    const { data: existing } = await supabase
-      .from('chat_rooms')
-      .select('id')
-      .or(`and(user_1.eq.${user.id},user_2.eq.${targetUserId}),and(user_1.eq.${targetUserId},user_2.eq.${user.id})`)
-      .maybeSingle();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-    if (existing) {
-      router.push(`/chat/${existing.id}`);
-      return;
+      // Crea o trova la stanza (Upsert)
+      const { data: room, error } = await supabase
+        .from('chat_rooms')
+        .upsert([
+          { user_1: session.user.id, user_2: targetUserId }
+        ], { onConflict: 'user_1, user_2' }) // Assicurati di avere un vincolo UNIQUE nel DB per questo se vuoi usare onConflict
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Vai alla chat
+      router.push(`/chat/${room.id}`);
+    } catch (err) {
+      alert("Errore nell'apertura della chat: " + err.message);
     }
-
-    // Altrimenti creala
-    const { data: newRoom } = await supabase
-      .from('chat_rooms')
-      .insert([{ user_1: user.id, user_2: targetUserId }])
-      .select().single();
-
-    if (newRoom) router.push(`/chat/${newRoom.id}`);
   };
 
-  if (loading) return (
-    <div style={styles.center}>
-      <div style={styles.spinner}></div>
-      <p>Cercando anime affini a {myCity}...</p>
-    </div>
-  );
+  if (loading) return <div style={styles.center}>Analisi del DNA compatibile a {myCity}...</div>;
 
   return (
     <main style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Esplora {myCity}</h1>
-        <p style={styles.subtitle}>Ecco le persone più compatibili con il tuo DNA</p>
+        <h1 style={styles.title}>Scoperte a {myCity}</h1>
+        <p style={styles.subtitle}>Persone con cui condividi passioni</p>
       </header>
+
+      {errorMsg && <div style={{...styles.card, backgroundColor: '#fee2e2', color: '#b91c1c', textAlign: 'center'}}>{errorMsg}</div>}
 
       <div style={styles.list}>
         {matches.length > 0 ? (
           matches.map(person => (
             <div key={person.id} style={styles.card}>
-              <div style={styles.cardInfo}>
-                <div style={styles.avatar}>?</div>
-                <div style={styles.textData}>
-                  <h3 style={styles.anonName}>Utente Compatibile</h3>
-                  <span style={styles.badge}>{person.score} passioni in comune</span>
+              <div style={styles.row}>
+                <div style={styles.avatar}>👤</div>
+                <div>
+                  <h3 style={styles.name}>Utente Compatibile, {person.age}</h3>
+                  <p style={styles.affinity}>🔥 {person.score} passioni in comune</p>
                 </div>
               </div>
               
-              <div style={styles.tags}>
-                {person.common.slice(0, 5).map(t => (
-                  <span key={t} style={styles.tag}>#{t}</span>
+              <div style={styles.tagRow}>
+                {person.commonTags.map(tag => (
+                  <span key={tag} style={styles.tag}>#{tag}</span>
                 ))}
-                {person.common.length > 5 && <span style={styles.tag}>+{person.common.length - 5}</span>}
               </div>
-
+              
               <button onClick={() => startChat(person.id)} style={styles.chatBtn}>
-                Inizia conversazione anonima
+                Avvia Conversazione
               </button>
             </div>
           ))
         ) : (
-          <div style={styles.noMatches}>
-            <p>Non abbiamo ancora trovato match perfetti a {myCity}.</p>
-            <button onClick={() => router.push('/onboarding')} style={styles.secondaryBtn}>
-              Aggiungi altri interessi
-            </button>
+          <div style={styles.emptyState}>
+            <p style={{fontSize: '40px', margin: '0 0 10px 0'}}>🏜️</p>
+            <p>Nessuna affinità trovata a {myCity} al momento.</p>
+            <button onClick={() => router.push('/onboarding')} style={{...styles.chatBtn, width: 'auto', marginTop: '15px'}}>Aggiungi più interessi</button>
           </div>
         )}
       </div>
@@ -131,22 +161,19 @@ export default function Discovery() {
 }
 
 const styles = {
-  container: { maxWidth: '500px', margin: '0 auto', padding: '20px', fontFamily: '"Segoe UI", Roboto, sans-serif', backgroundColor: '#f9fafb', minHeight: '100vh' },
-  header: { marginBottom: '30px', textAlign: 'center' },
-  title: { fontSize: '28px', fontWeight: 'bold', color: '#111827', margin: '0' },
-  subtitle: { fontSize: '14px', color: '#6b7280', marginTop: '5px' },
+  container: { padding:'20px', maxWidth:'500px', margin:'0 auto', fontFamily: 'sans-serif' },
+  header: { marginBottom: '24px' },
+  title: { fontSize:'28px', fontWeight:'800', margin:'0 0 4px 0', color: '#0f172a' },
+  subtitle: { fontSize: '15px', color: '#64748b', margin: 0 },
   list: { display: 'flex', flexDirection: 'column', gap: '16px' },
-  card: { backgroundColor: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #f3f4f6' },
-  cardInfo: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' },
-  avatar: { width: '50px', height: '50px', borderRadius: '25px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: '20px', color: '#9ca3af' },
-  textData: { display: 'flex', flexDirection: 'column' },
-  anonName: { margin: '0', fontSize: '18px', fontWeight: '600', color: '#111827' },
-  badge: { fontSize: '12px', color: '#059669', fontWeight: 'bold', backgroundColor: '#ecfdf5', padding: '2px 8px', borderRadius: '10px', width: 'fit-content', marginTop: '4px' },
-  tags: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' },
-  tag: { fontSize: '12px', backgroundColor: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: '6px', fontWeight: '500' },
-  chatBtn: { width: '100%', padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: '#2563eb', color: 'white', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' },
-  center: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh', color: '#6b7280' },
-  noMatches: { textAlign: 'center', padding: '40px', color: '#6b7280' },
-  secondaryBtn: { marginTop: '10px', background: 'none', border: '1px solid #d1d5db', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' },
-  spinner: { width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTop: '4px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }
+  card: { backgroundColor:'#fff', borderRadius:'20px', padding:'20px', border:'1px solid #e2e8f0', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' },
+  row: { display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px' },
+  avatar: { width:'56px', height:'56px', borderRadius:'28px', backgroundColor:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px' },
+  name: { fontSize:'18px', fontWeight:'700', margin:'0 0 4px 0', color: '#1e293b' },
+  affinity: { fontSize:'14px', fontWeight: '600', color:'#10b981', margin:0 },
+  tagRow: { display:'flex', flexWrap:'wrap', gap:'8px', marginBottom:'20px' },
+  tag: { fontSize:'12px', fontWeight: '600', color:'#3b82f6', background:'#eff6ff', padding:'6px 12px', borderRadius:'8px' },
+  chatBtn: { width:'100%', padding:'14px', border:'none', borderRadius:'12px', backgroundColor:'#1e293b', color:'#fff', fontWeight:'bold', fontSize: '15px', cursor:'pointer', transition: 'background 0.2s' },
+  emptyState: { textAlign: 'center', padding: '40px 20px', backgroundColor: '#f8fafc', borderRadius: '20px', color: '#64748b' },
+  center: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#64748b', fontFamily: 'sans-serif', fontWeight: '500' }
 };
