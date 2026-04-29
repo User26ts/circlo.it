@@ -1,21 +1,24 @@
 
+
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-// Importiamo il catalogo dal file esterno che hai creato
+// Importiamo il catalogo dal file esterno catalog.js
 import { MEGA_CATALOGO } from "./catalog";
 
-// Sostituisci con le tue chiavi reali
+// Client Supabase configurato con le tue chiavi
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
 export default function Onboarding() {
   const router = useRouter();
+  
+  // STATI DELLA PAGINA
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Dati Profilo
+  // DATI PROFILO
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [city, setCity] = useState("");
@@ -23,12 +26,12 @@ export default function Onboarding() {
   const [birthDate, setBirthDate] = useState("");
   const [selected, setSelected] = useState([]);
 
-  // Navigazione Catalogo
+  // NAVIGAZIONE CATALOGO
   const [mainCat, setMainCat] = useState("musica");
   const [subCat, setSubCat] = useState(Object.keys(MEGA_CATALOGO.musica)[0]);
   const [leafCat, setLeafCat] = useState(null);
 
-  // 1. Caricamento dati iniziali
+  // 1. CARICAMENTO INIZIALE (Recupera i dati se l'utente li ha già inseriti)
   useEffect(() => {
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -48,13 +51,17 @@ export default function Onboarding() {
     loadProfile();
   }, []);
 
-  // 2. Funzione intelligente per estrarre gli elementi dal catalogo senza crash
+  // 2. LOGICA CATALOGO (Estrae gli elementi filtrati per la griglia)
   const getDisplayItems = () => {
     try {
       const currentMain = MEGA_CATALOGO[mainCat];
       if (!currentMain) return [];
+      
+      // Se la categoria principale è un array (es. viaggi)
       if (Array.isArray(currentMain)) {
-        return searchTerm ? currentMain.filter(i => i.toLowerCase().includes(searchTerm.toLowerCase())) : currentMain;
+        return searchTerm 
+          ? currentMain.filter(i => i.toLowerCase().includes(searchTerm.toLowerCase())) 
+          : currentMain;
       }
 
       const currentSub = currentMain[subCat];
@@ -64,18 +71,22 @@ export default function Onboarding() {
       if (Array.isArray(currentSub)) {
         finalArray = currentSub;
       } else if (typeof currentSub === 'object') {
+        // Gestisce il terzo livello (es. generi vs artisti)
         finalArray = leafCat ? (currentSub[leafCat] || []) : Object.values(currentSub).flat();
       }
 
+      // Applica la ricerca testuale
       if (searchTerm) {
         return finalArray.filter(i => i.toLowerCase().includes(searchTerm.toLowerCase()));
       }
       return finalArray;
     } catch (e) {
+      console.error("Errore catalogo:", e);
       return [];
     }
   };
 
+  // 3. AZIONI (Toggle interessi e Salvataggio)
   const toggle = (item) => {
     setSelected(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
   };
@@ -83,7 +94,11 @@ export default function Onboarding() {
   const handleSave = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return alert("Sessione scaduta, effettua il login.");
+    if (!user) {
+      alert("Sessione scaduta, effettua nuovamente il login.");
+      router.push("/login");
+      return;
+    }
 
     const { error } = await supabase.from('profiles').update({
       first_name: firstName,
@@ -102,13 +117,18 @@ export default function Onboarding() {
     setLoading(false);
   };
 
-  if (loading) return <div style={styles.loading}>Caricamento DNA Circlo...</div>;
+  // 4. LOADING STATE (Deve stare qui, prima del return principale)
+  if (loading) {
+    return <div style={styles.loading}>Caricamento DNA Circlo...</div>;
+  }
 
+  // 5. RITORNO DELLA PAGINA (JSX)
   return (
     <main style={styles.main}>
       <div style={styles.card}>
         
         {step === 1 ? (
+          /* STEP 1: DATI ANAGRAFICI */
           <div>
             <h2 style={styles.title}>Il tuo Profilo</h2>
             <div style={styles.formGrid}>
@@ -126,6 +146,7 @@ export default function Onboarding() {
             <button style={styles.btnNext} onClick={()=>setStep(2)}>PROSEGUI AL DNA →</button>
           </div>
         ) : (
+          /* STEP 2: SELEZIONE INTERESSI */
           <div>
             <div style={styles.header}>
               <button style={styles.btnBack} onClick={()=>setStep(1)}>← DATI</button>
@@ -147,7 +168,7 @@ export default function Onboarding() {
               ))}
             </div>
 
-            {/* Menu Sotto Categorie (se esistono) */}
+            {/* Menu Sotto Categorie */}
             {typeof MEGA_CATALOGO[mainCat] === 'object' && !Array.isArray(MEGA_CATALOGO[mainCat]) && (
               <div style={styles.scrollRow}>
                 {Object.keys(MEGA_CATALOGO[mainCat]).map(sub => (
@@ -191,6 +212,7 @@ export default function Onboarding() {
   );
 }
 
+// STILI CSS-IN-JS
 const styles = {
   main: { minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'sans-serif' },
   card: { background: 'white', padding: '25px', borderRadius: '24px', width: '100%', maxWidth: '750px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
