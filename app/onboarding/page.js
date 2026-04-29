@@ -55,27 +55,63 @@ export default function Onboarding() {
 
   if (loading) return <div>Caricamento...</div>;
 
-  return (
-    <main style={styles.main}>
-      <div style={styles.card}>
-        {step === 1 ? (
-          <div>
-            <h2>I tuoi Dati</h2>
-            <input style={styles.input} placeholder="Nome" value={firstName} onChange={e=>setFirstName(e.target.value)} />
-            <select style={styles.input} value={city} onChange={e=>setCity(e.target.value)}>
-              <option value="">In che provincia vivi?</option>
-              {PROVINCE_ITALIANE.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <button onClick={()=>setStep(2)}>PROSEGUI</button>
+return (
+  <main style={styles.main}>
+    <div style={styles.card}>
+      {step === 1 ? (
+        /* --- STEP 1: DATI PERSONALI --- */
+        <div style={styles.stepContainer}>
+          <h2 style={styles.title}>Iniziamo dalle basi</h2>
+          <p style={styles.subtitle}>Come ti chiami e dove ti trovi?</p>
+          
+          <input 
+            style={styles.input} 
+            placeholder="Il tuo nome" 
+            value={firstName} 
+            onChange={e => setFirstName(e.target.value)} 
+          />
+          
+          <select 
+            style={styles.input} 
+            value={city} 
+            onChange={e => setCity(e.target.value)}
+          >
+            <option value="">Seleziona la tua provincia</option>
+            {PROVINCE_ITALIANE.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          <button 
+            style={styles.button} 
+            onClick={() => {
+              if(!firstName || !city) alert("Inserisci nome e provincia!");
+              else setStep(2);
+            }}
+          >
+            Scegli i tuoi interessi →
+          </button>
+        </div>
+      ) : (
+        /* --- STEP 2: IL CATALOGO (Quello che era sparito) --- */
+        <div style={styles.stepContainer}>
+          <h2 style={styles.title}>Crea il tuo DNA</h2>
+          <p style={styles.subtitle}>Seleziona almeno 5 passioni per trovare i tuoi simili</p>
+          
+          {/* Qui deve esserci la tua griglia degli interessi (quella con MEGA_CATALOGO) */}
+          <div style={styles.grid}>
+             {/* ... inserisci qui il codice della griglia che avevi su github ... */}
           </div>
-        ) : (
-          <div>
-            {/* ... Qui inserisci la griglia degli interessi che avevamo già fatto ... */}
-            <button onClick={handleSave}>SALVA DNA</button>
-          </div>
-        )}
-      </div>
-    </main>
-  );
-}
+
+          <button 
+            style={styles.buttonSave} 
+            onClick={handleSave}
+          >
+            {loading ? "Salvataggio..." : "Trova persone affini"}
+          </button>
+        </div>
+      )}
+    </div>
+  </main>
+);
 const styles = { /* ... gli stili che abbiamo già ... */ };
