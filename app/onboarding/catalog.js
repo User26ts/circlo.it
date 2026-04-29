@@ -1,4 +1,4 @@
-// constants.js
+// catalog.js
 export const MEGA_CATALOGO = {
   musica: {
     "Rock & Alternative": {
