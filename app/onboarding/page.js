@@ -13,8 +13,9 @@ export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   
+  // Dati profilo
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [birthDate, setBirthDate] = useState(""); 
@@ -24,11 +25,9 @@ export default function Onboarding() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const { data: { session }, error: authError } = await supabase.auth.getSession();
-        if (authError || !session) { router.push("/"); return; }
-
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { router.push("/"); return; }
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-
         if (profile) {
           setFirstName(profile.first_name || "");
           setLastName(profile.last_name || "");
@@ -36,25 +35,35 @@ export default function Onboarding() {
           setCity(profile.city || "");
           setSelected(Array.isArray(profile.affinity_data?.interests) ? profile.affinity_data.interests : []);
         }
-      } catch (err) {
-        console.error("Errore:", err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     loadProfile();
   }, [router]);
 
-  const toggleInteresse = (item) => {
-    setSelected(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
+  // --- LOGICA RICORSIVA PER TAG E RICERCA ---
+  const toggleTag = (tag) => {
+    setSelected(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
+
+  const getAllTags = (obj) => {
+    let tags = [];
+    for (let key in obj) {
+      if (Array.isArray(obj[key])) { tags = [...tags, ...obj[key]]; }
+      else if (typeof obj[key] === 'object') { tags = [...tags, ...getAllTags(obj[key])]; }
+    }
+    return [...new Set(tags)];
+  };
+
+  const allAvailableTags = getAllTags(MEGA_CATALOGO);
+  const searchResults = searchTerm.length > 1 
+    ? allAvailableTags.filter(t => t.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 10)
+    : [];
 
   const handleSave = async () => {
     setSaving(true);
-    setErrorMsg("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const { error } = await supabase.from('profiles').upsert({
+      await supabase.from('profiles').upsert({
         id: session.user.id,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
@@ -63,117 +72,101 @@ export default function Onboarding() {
         affinity_data: { interests: selected },
         updated_at: new Date().toISOString()
       });
-
-      if (error) throw error;
       router.push("/discovery");
-    } catch (err) {
-      setErrorMsg(err.message || "Errore durante il salvataggio.");
-      setSaving(false);
-    }
+    } catch (err) { alert("Errore al salvataggio"); setSaving(false); }
   };
 
-  const isStep1Valid = firstName.trim() !== "" && city !== "" && birthDate !== "";
+  // --- FUNZIONE DI RENDERING RICORSIVO (IL CUORE DEL CATALOGO) ---
+  const renderDNA = (data, level = 0) => {
+    return Object.keys(data).map(key => {
+      const value = data[key];
+      if (Array.isArray(value)) {
+        return (
+          <div key={key} style={{ marginBottom: '20px', marginLeft: level > 0 ? '15px' : '0' }}>
+            <p style={styles.subCatTitle}>{key}</p>
+            <div style={styles.tagGrid}>
+              {value.map(tag => (
+                <button key={tag} onClick={() => toggleTag(tag)} style={getTagStyle(selected, tag)}>
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div key={key} style={{ marginBottom: '30px', borderLeft: level > 0 ? '2px solid #e2e8f0' : 'none', paddingLeft: level > 0 ? '15px' : '0' }}>
+          <h3 style={level === 0 ? styles.mainCatTitle : styles.midCatTitle}>
+            {level === 0 ? key : `↳ ${key}`}
+          </h3>
+          {renderDNA(value, level + 1)}
+        </div>
+      );
+    });
+  };
 
-  if (loading) return <div style={styles.center}>Inizializzazione...</div>;
+  if (loading) return <div style={styles.center}>Caricamento DNA...</div>;
 
   return (
     <main style={styles.main}>
       <div style={step === 3 ? styles.cardLarge : styles.card}>
-        {errorMsg && <div style={styles.errorBanner}>{errorMsg}</div>}
         
-        {/* STEP 1: Dati base */}
         {step === 1 && (
           <div style={styles.content}>
-            <h2 style={styles.title}>Chi sei?</h2>
-            <p style={styles.subtitle}>Iniziamo dalle presentazioni base.</p>
-            
-            <form onSubmit={(e) => { e.preventDefault(); if(isStep1Valid) setStep(2); }}>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Nome</label>
-                <input required style={styles.input} placeholder="Es. Giulia" value={firstName} onChange={e=>setFirstName(e.target.value)} />
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Cognome <span style={{fontWeight:'normal', color:'#94a3b8'}}>(opzionale)</span></label>
-                <input style={styles.input} placeholder="Es. Rossi" value={lastName} onChange={e=>setLastName(e.target.value)} />
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Data di nascita</label>
-                <input required style={styles.input} type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} max={new Date().toISOString().split("T")[0]} />
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Provincia</label>
-                <select required style={styles.input} value={city} onChange={e=>setCity(e.target.value)}>
-                  <option value="">Seleziona...</option>
-                  {PROVINCE_ITALIANE.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <button type="submit" style={{...styles.button, opacity: isStep1Valid ? 1 : 0.5}} disabled={!isStep1Valid}>
-                Continua →
-              </button>
-            </form>
+            <h2 style={styles.title}>Benvenuto</h2>
+            <input style={styles.input} placeholder="Nome" value={firstName} onChange={e=>setFirstName(e.target.value)} />
+            <input style={styles.input} type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} />
+            <select style={styles.input} value={city} onChange={e=>setCity(e.target.value)}>
+              <option value="">Provincia</option>
+              {PROVINCE_ITALIANE.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <button style={styles.button} onClick={() => setStep(2)}>Continua</button>
           </div>
         )}
 
-        {/* STEP 2: Filosofia (Il "Pop-up" integrato) */}
         {step === 2 && (
-          <div style={{...styles.content, textAlign: 'center', padding: '20px 10px'}}>
-            <div style={{fontSize: '60px', marginBottom: '10px'}}>🧬</div>
-            <h2 style={{...styles.title, fontSize: '28px', color: '#0f172a'}}>Crea il tuo DNA</h2>
-            <p style={{fontSize: '16px', color: '#475569', lineHeight: '1.6', marginBottom: '20px'}}>
-              Su Circlo non si scorrono foto infinite. Le connessioni si basano sulle <b>passioni che condividi</b> con l'altra persona.
-            </p>
-            <div style={{backgroundColor: '#f1f5f9', padding: '15px', borderRadius: '12px', marginBottom: '30px', textAlign: 'left'}}>
-              <p style={{margin: '0 0 10px 0', fontSize: '14px', color: '#334155'}}>✨ <b>Sii specifico:</b> Non scegliere solo "Musica", scegli "Shoegaze" o "Techno".</p>
-              <p style={{margin: '0 0 10px 0', fontSize: '14px', color: '#334155'}}>🔍 <b>Match migliori:</b> Più tag selezioni, più accurati saranno i profili che ti proporremo.</p>
-              <p style={{margin: '0', fontSize: '14px', color: '#334155'}}>🛡️ <b>Privacy:</b> Gli altri vedranno <i>solo</i> i tag che avete in comune.</p>
-            </div>
-            
-            <button onClick={() => setStep(3)} style={styles.button}>Ho capito, creiamo il DNA</button>
-            <p style={styles.backLink} onClick={()=>setStep(1)}>← Torna indietro</p>
+          <div style={{...styles.content, textAlign: 'center'}}>
+            <div style={{fontSize: '50px'}}>🧬</div>
+            <h2 style={styles.title}>La filosofia di Circlo</h2>
+            <p style={styles.text}>Siamo studenti come te. Qui i match nascono dalle passioni, non dal caso. Sii specifico!</p>
+            <button style={styles.button} onClick={() => setStep(3)}>Componi il tuo DNA</button>
           </div>
         )}
 
-        {/* STEP 3: Il Catalogo (Nuovo Layout a schede) */}
         {step === 3 && (
-          <div style={styles.content}>
-            <div style={styles.headerSticky}>
-              <h2 style={{...styles.title, margin: 0}}>Il tuo DNA</h2>
-              <p style={{fontSize: '13px', color: '#64748b', margin: 0}}>Selezionati: <b>{selected.length}</b></p>
-            </div>
-            
-            <div style={styles.scrollArea}>
-              {MEGA_CATALOGO && Object.keys(MEGA_CATALOGO).map(mainCat => (
-                <div key={mainCat} style={styles.categoryCard}>
-                  <h3 style={styles.mainCatTitle}>{mainCat}</h3>
-                  
-                  {Object.keys(MEGA_CATALOGO[mainCat]).map(subCat => {
-                    const items = MEGA_CATALOGO[mainCat][subCat];
-                    return (
-                      <div key={subCat} style={styles.subCatBox}>
-                        <p style={styles.subCatTitle}>{subCat}</p>
-                        <div style={styles.tagGrid}>
-                          {Array.isArray(items) && items.map(item => (
-                            <button key={item} onClick={()=>toggleInteresse(item)} style={getTagStyle(selected, item)}>
-                              {item}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+          <div style={styles.dnaContainer}>
+            <div style={styles.searchBox}>
+              <input 
+                style={styles.searchInput} 
+                placeholder="Cerca un artista, un piatto, un autore..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+              {searchResults.length > 0 && (
+                <div style={styles.searchDropdown}>
+                  {searchResults.map(t => (
+                    <div key={t} onClick={() => {toggleTag(t); setSearchTerm("");}} style={styles.searchItem}>
+                      {t} {selected.includes(t) ? "✅" : "+"}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-            
-            <div style={styles.footerAction}>
-              <button 
-                style={{...styles.buttonSave, opacity: selected.length < 3 || saving ? 0.7 : 1}} 
-                onClick={handleSave}
-                disabled={selected.length < 3 || saving}
-              >
-                {saving ? "Salvataggio..." : selected.length < 3 ? "Scegli almeno 3 tag" : "Salva e Inizia"}
+
+            <div style={styles.scrollArea}>
+              <div style={styles.selectionSummary}>
+                Selezionati: <b>{selected.length}</b>
+                <div style={styles.miniTagGrid}>
+                  {selected.slice(-5).map(s => <span key={s} style={styles.miniTag}>{s}</span>)}
+                </div>
+              </div>
+              {renderDNA(MEGA_CATALOGO)}
+            </div>
+
+            <div style={styles.footer}>
+              <button style={styles.buttonSave} onClick={handleSave} disabled={saving}>
+                {saving ? "Salvataggio..." : "Salva e Inizia"}
               </button>
-              <p style={styles.backLink} onClick={()=>setStep(2)}>Rileggi le istruzioni</p>
             </div>
           </div>
         )}
@@ -182,43 +175,35 @@ export default function Onboarding() {
   );
 }
 
-const getTagStyle = (selected, item) => {
-  const isActive = selected.includes(item);
-  return {
-    padding: '8px 14px', 
-    borderRadius: '20px', 
-    fontSize: '13px', 
-    fontWeight: '500',
-    cursor: 'pointer', 
-    border: isActive ? '1px solid #10b981' : '1px solid #e2e8f0', 
-    transition: 'all 0.15s ease',
-    backgroundColor: isActive ? '#10b981' : '#fff',
-    color: isActive ? '#fff' : '#475569',
-    boxShadow: isActive ? '0 4px 6px -1px rgba(16, 185, 129, 0.2)' : 'none'
-  };
-};
+const getTagStyle = (selected, tag) => ({
+  padding: '8px 14px', borderRadius: '20px', fontSize: '13px', cursor: 'pointer', border: '1px solid #e2e8f0',
+  backgroundColor: selected.includes(tag) ? '#10b981' : '#fff',
+  color: selected.includes(tag) ? '#fff' : '#475569', transition: '0.2s'
+});
 
 const styles = {
-  main: { display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', backgroundColor:'#f8fafc', padding:'15px', fontFamily: 'sans-serif' },
-  card: { backgroundColor:'#fff', padding:'30px', borderRadius:'24px', width:'100%', maxWidth:'450px', boxShadow:'0 10px 25px rgba(0,0,0,0.05)' },
-  cardLarge: { backgroundColor:'#f8fafc', width:'100%', maxWidth:'600px', display: 'flex', flexDirection: 'column', height: '90vh', borderRadius:'24px', overflow: 'hidden' },
-  content: { display:'flex', flexDirection:'column', flex: 1, overflow: 'hidden' },
-  headerSticky: { padding: '20px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '24px 24px 0 0' },
-  title: { fontSize:'24px', fontWeight:'800', margin:'0 0 8px 0', color: '#0f172a' },
-  subtitle: { fontSize:'14px', color:'#64748b', margin:'0 0 24px 0' },
-  errorBanner: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', textAlign: 'center' },
-  inputGroup: { marginBottom:'16px' },
-  label: { fontSize:'13px', fontWeight: '600', color:'#475569', marginBottom:'6px', display: 'block' },
-  input: { width:'100%', padding:'12px', borderRadius:'12px', border:'1px solid #cbd5e1', fontSize:'16px', boxSizing: 'border-box', outline: 'none' },
-  button: { width: '100%', padding:'14px', backgroundColor:'#3b82f6', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'bold', fontSize: '16px', cursor:'pointer', marginTop: '10px' },
-  buttonSave: { width: '100%', padding:'16px', backgroundColor:'#10b981', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'bold', fontSize: '16px', cursor:'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' },
-  scrollArea: { flex: 1, overflowY:'auto', padding: '15px' },
-  categoryCard: { backgroundColor: '#fff', borderRadius: '16px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid #f1f5f9' },
-  mainCatTitle: { fontSize:'18px', fontWeight: '800', color:'#1e293b', margin: '0 0 15px 0' },
-  subCatBox: { marginBottom:'20px' },
-  subCatTitle: { fontSize:'13px', fontWeight:'700', color:'#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', margin:'0 0 10px 0' },
+  main: { display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', backgroundColor:'#f1f5f9', padding:'15px', fontFamily: 'sans-serif' },
+  card: { backgroundColor:'#fff', padding:'30px', borderRadius:'24px', width:'100%', maxWidth:'400px', boxShadow:'0 10px 25px rgba(0,0,0,0.05)' },
+  cardLarge: { backgroundColor:'#fff', borderRadius:'24px', width:'100%', maxWidth:'600px', height: '90vh', display:'flex', flexDirection:'column', overflow:'hidden' },
+  content: { display:'flex', flexDirection:'column', gap: '15px' },
+  title: { fontSize:'24px', fontWeight:'800', textAlign:'center' },
+  text: { color: '#64748b', lineHeight: '1.5' },
+  input: { padding:'12px', borderRadius:'12px', border:'1px solid #cbd5e1' },
+  button: { padding:'14px', backgroundColor:'#3b82f6', color:'#fff', border:'none', borderRadius:'12px', fontWeight:'bold', cursor:'pointer' },
+  dnaContainer: { display:'flex', flexDirection:'column', height:'100%' },
+  searchBox: { padding: '20px', borderBottom: '1px solid #f1f5f9', position: 'relative' },
+  searchInput: { width:'100%', padding:'12px', borderRadius:'10px', border:'2px solid #3b82f6', boxSizing:'border-box' },
+  searchDropdown: { position:'absolute', top:'70px', left:'20px', right:'20px', backgroundColor:'#fff', zIndex:100, borderRadius:'10px', boxShadow:'0 10px 20px rgba(0,0,0,0.1)' },
+  searchItem: { padding:'12px', borderBottom:'1px solid #f8fafc', cursor:'pointer' },
+  scrollArea: { flex:1, overflowY:'auto', padding:'20px' },
+  selectionSummary: { marginBottom:'20px', padding:'15px', backgroundColor:'#f8fafc', borderRadius:'12px' },
+  miniTagGrid: { display:'flex', gap:'5px', marginTop:'8px', flexWrap:'wrap' },
+  miniTag: { fontSize:'10px', background:'#e2e8f0', padding:'2px 8px', borderRadius:'5px' },
+  mainCatTitle: { fontSize:'20px', fontWeight:'800', color:'#1e293b', marginBottom:'15px' },
+  midCatTitle: { fontSize:'15px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', marginBottom:'10px' },
+  subCatTitle: { fontSize:'13px', color:'#94a3b8', fontWeight:'bold', marginBottom:'8px' },
   tagGrid: { display:'flex', flexWrap:'wrap', gap:'8px' },
-  footerAction: { padding: '20px', backgroundColor: '#fff', borderTop: '1px solid #e2e8f0', borderRadius: '0 0 24px 24px' },
-  backLink: { textAlign:'center', fontSize:'13px', fontWeight: '600', color:'#94a3b8', marginTop:'16px', cursor:'pointer', transition: 'color 0.2s' },
-  center: { display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', color: '#64748b', fontFamily: 'sans-serif', fontWeight: '500' }
+  footer: { padding:'20px', borderTop:'1px solid #f1f5f9' },
+  buttonSave: { width:'100%', padding:'16px', backgroundColor:'#10b981', color:'#fff', border:'none', borderRadius:'12px', fontWeight:'bold', cursor:'pointer' },
+  center: { display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', color:'#64748b' }
 };
