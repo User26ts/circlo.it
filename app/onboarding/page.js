@@ -4,67 +4,53 @@ import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
-
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-const CATALOGO_ESTESO = {
+const MEGA_CATALOGO = {
   musica: {
-    "Classica & Strumentale": {
-      sottogeneri: ["Barocco", "Classico", "Romantico", "Tardo-Romantico", "Impressionismo", "Modernismo", "Contemporaneo", "Minimalismo", "Musica Sacra", "Opera", "Musica da Camera", "Sinfonica", "Pianoforte solo", "Musica per archi", "Musica corale", "Colonne Sonore Orchestrali", "Neoclassico", "Avanguardia"],
-      compositori: ["Bach", "Vivaldi", "Handel", "Mozart", "Beethoven", "Chopin", "Liszt", "Brahms", "Tchaikovsky", "Mahler", "Wagner", "Verdi", "Puccini", "Debussy", "Ravel", "Satie", "Stravinsky", "Shostakovich", "Prokofiev", "Philip Glass", "Steve Reich", "Arvo Pärt", "Ludovico Einaudi", "Max Richter", "Nils Frahm", "Hans Zimmer", "John Williams", "Ennio Morricone"],
-      abitudini: ["Ascolto concentrato", "Concerti in teatro", "Studio della musica", "Collezione registrazioni storiche", "Playlist rilassamento", "Analisi tecnica"]
+    "Rock & Metal": {
+      generi: ["Alternative Rock", "Hard Rock", "Punk Rock", "Heavy Metal", "Grunge", "Indie Rock", "Post-Punk", "Psychedelic Rock", "Prog Rock", "Shoegaze"],
+      artisti: ["The Beatles", "Pink Floyd", "Led Zeppelin", "Queen", "Nirvana", "Radiohead", "Arctic Monkeys", "The Smiths", "Metallica", "AC/DC", "The Rolling Stones", "The Cure", "Joy Division", "The Strokes", "Tame Impala", "Linkin Park", "Foo Fighters", "Red Hot Chili Peppers"]
     },
-    "Rock & Alternative": {
-      sottogeneri: ["Rock Classico", "Hard Rock", "Punk", "Grunge", "Indie Rock", "Alternative", "Post-Rock"],
-      artisti: ["The Beatles", "Pink Floyd", "Led Zeppelin", "Queen", "Nirvana", "Arctic Monkeys", "Radiohead", "The Strokes", "Foo Fighters", "Tame Impala"]
+    "Pop & Elettronica": {
+      generi: ["Synth-pop", "Dance-pop", "Techno", "House", "Ambient", "Drum & Bass", "K-Pop", "Hyperpop", "Indie Pop", "Disco", "Lo-Fi"],
+      artisti: ["Daft Punk", "Taylor Swift", "The Weeknd", "Dua Lipa", "Harry Styles", "Billie Eilish", "Lana Del Rey", "Charli XCX", "Aphex Twin", "Peggy Gou", "Calvin Harris", "Depeche Mode", "Pet Shop Boys", "BTS", "Fred again.."]
     },
     "Hip Hop & Urban": {
-      sottogeneri: ["Rap Italiano", "Trap", "Old School Hip Hop", "Drill", "R&B", "Lo-Fi Hip Hop"],
-      artisti: ["Marracash", "Sfera Ebbasta", "Lazza", "Salmo", "Fabri Fibra", "Drake", "Kanye West", "Travis Scott", "Kendrick Lamar", "The Weeknd"]
+      generi: ["Rap Italiano", "Trap", "Old School", "Lo-fi Hip Hop", "Drill", "R&B", "Soul", "Grime"],
+      artisti: ["Marracash", "Guè", "Salmo", "Fabri Fibra", "Lazza", "Sfera Ebbasta", "Kendrick Lamar", "Drake", "Kanye West", "Travis Scott", "Tyler, The Creator", "Frank Ocean", "J. Cole", "Eminem", "Tupac", "Notorious B.I.G."]
     },
-    "Elettronica & Dance": {
-      sottogeneri: ["House", "Techno", "EDM", "Ambient", "Drum & Bass", "Dubstep", "Synthwave"],
-      artisti: ["Daft Punk", "Avicii", "Calvin Harris", "Martin Garrix", "Deadmau5", "Charlotte de Witte", "Aphex Twin", "Eric Prydz", "Peggy Gou", "Skrillex"]
-    },
-    "Pop & Mainstream": {
-      sottogeneri: ["Pop internazionale", "Indie Pop", "K-Pop", "Pop elettronico", "Dance Pop"],
-      artisti: ["Taylor Swift", "Billie Eilish", "Dua Lipa", "Harry Styles", "Ariana Grande", "Ed Sheeran", "The Weeknd", "Olivia Rodrigo", "BTS", "Coldplay"]
-    },
-    "Jazz, Blues & Soul": {
-       sottogeneri: ["Jazz classico", "Smooth Jazz", "Blues", "Soul", "Funk", "Neo Soul"],
-       artisti: ["Miles Davis", "John Coltrane", "Louis Armstrong", "B.B. King", "Ray Charles", "Aretha Franklin", "Stevie Wonder", "Nina Simone", "Erykah Badu", "Herbie Hancock"]
-    },
-    "Abitudini Generali": {
-       lista: ["Concerti live", "Festival musicali", "Ascolto quotidiano", "Musica per lavorare/studiare", "Scoperta musica nuova", "Playlist curate", "Album completi", "Collezione vinili/CD", "Suono uno strumento", "Produco musica"]
+    "Classica & Jazz": {
+      generi: ["Barocco", "Classicismo", "Romanticismo", "Minimalismo", "Jazz Classico", "Fusion", "Bossa Nova", "Blues", "Opera", "Colonne Sonore"],
+      artisti: ["Bach", "Mozart", "Beethoven", "Chopin", "Debussy", "Miles Davis", "John Coltrane", "Bill Evans", "Chet Baker", "Ennio Morricone", "Hans Zimmer", "Ludovico Einaudi", "Max Richter"]
     }
   },
-  cinema_tv: {
-    generi: ["Thriller", "Commedie Romantiche", "Anime", "Documentari", "Horror", "Fantascienza", "Crime/True Crime", "Sitcom", "Dramma", "Azione", "Avventura", "Fantasy", "Storico", "Biografico", "Noir", "Psicologico", "Supereroi", "Teen Drama", "Reality Show", "Animazione", "Western", "Mockumentary"],
-    piattaforme: ["Binge Watching", "Solo Cinema", "Serie TV Infinite", "Film d'autore", "Streaming serale", "Maratone nel weekend", "Rewatch comfort series", "Lingua originale", "Cinema indipendente", "Blockbuster", "YouTube/Shorts"]
+  cibo: {
+    "Cucina Italiana": {
+      regioni: ["Toscana", "Siciliana", "Pugliese", "Emiliana", "Romana", "Campana", "Veneta", "Piemontese", "Ligure", "Calabrese"],
+      specialita: ["Pizza Contemporanea", "Pasta Fresca", "Street Food", "Vini Rossi", "Bollicine", "Formaggi stagionati", "Gelato Artigianale", "Tartufo", "Pasticceria Siciliana"]
+    },
+    "Cucina Internazionale": {
+      etnico: ["Giapponese/Sushi", "Cinese", "Messicano", "Indiano", "Thailandese", "Greco", "Mediorientale/Kebab", "Poke", "American BBQ", "Coreano", "Peruviano/Ceviche"]
+    },
+    "Stile di Vita": {
+      dieta: ["Vegan", "Vegetariano", "Senza Glutine", "Bio/Km 0", "Amo Cucinare", "Fine Dining/Gourmet", "Healthy Food", "Fast Food Lover"]
+    }
   },
-  sport: {
-    attivita: ["Palestra/Fitness", "Calcio", "Padel", "Trekking", "Crossfit", "Yoga/Pilates", "Nuoto", "Tennis", "Arrampicata", "Running", "Ciclismo", "Basket", "Arti marziali", "Sci/Snowboard", "Surf", "Skate", "Beach Volley", "Escursionismo", "Allenamenti a casa", "Functional training"]
+  tempo_libero: {
+    "Cinema & TV": {
+      generi: ["Sci-Fi", "Horror", "Thriller", "Drammatico", "Sitcom", "Anime", "Documentari", "Crime/True Crime", "Noir", "Animazione d'autore", "Film d'essai"],
+      culto: ["Star Wars", "Marvel/DC", "Harry Potter", "Il Trono di Spade", "Studio Ghibli", "Wes Anderson", "Quentin Tarantino", "Christopher Nolan"]
+    },
+    "Sport & Outdoor": {
+      attivita: ["Palestra/Crossfit", "Calcio", "Padel", "Tennis", "Yoga/Pilates", "Trekking/Hiking", "Arrampicata", "Running", "Nuoto", "Ciclismo", "Basket", "Sci/Snowboard", "Surf", "Skate"]
+    },
+    "Hobby & Nerd": {
+      interessi: ["Gaming (PC/Console)", "Board Games/D&D", "Lettura/Libri", "Manga/Fumetti", "Fotografia", "Pittura/Disegno", "Scrittura", "Tecnologia/AI", "Collezionismo", "Astronomia", "Giardinaggio", "Fai da te"]
+    }
   },
   viaggi: {
-    stile: ["Avventura/Zaino in spalla", "Città d'arte", "Mare e Relax", "Viaggi Low Cost", "Luxury Travel", "Solo Travel", "Road Trip", "Viaggi organizzati", "Weekend brevi", "Viaggi lunghi", "Esperienze autentiche", "Digital nomad", "Cultura", "Natura/Montagna", "On the road", "Viaggi spontanei", "Crociere", "Work & travel"]
-  },
-  cibo: {
-    gusti: ["Sushi/Giapponese", "Pizza Lover", "Cucina Tradizionale", "Sperimentale/Gourmet", "Vegan/Vegetariano", "Street Food", "Amo Cucinare", "Cucina etnica", "Fast food", "Dolci/Pasticceria", "Cibo salutare", "BBQ/Grigliate", "Cucina casalinga", "Food delivery", "Degustazioni vini", "Birre artigianali", "Caffè specialty", "Brunch lover"]
-  },
-  creativita: {
-    hobby: ["Disegno/Illustrazione", "Scrittura Creativa", "Fotografia", "Ceramica/Fai da te", "Pittura", "Montaggio Video", "Graphic Design", "Fashion design", "Calligrafia", "Contenuti social", "DIY/Artigianato", "Musica (comporre/suonare)", "Recitazione", "Danza", "Podcasting", "Storytelling", "Editing foto"]
-  },
-  tecnologia: {
-    interessi: ["Gaming PC", "Console (PS5/Xbox)", "Nintendo/Retro-gaming", "AI", "Cripto/Web3", "Gadget Tech", "Smart home", "Programmazione", "Startup/Innovazione", "Cybersecurity", "VR/AR", "Streaming/Twitch", "Hardware building", "App productivity", "Social media trends", "Tech news", "Automazione"]
-  },
-  lettura: {
-    generi: ["Manga/Fumetti", "Romanzi Fantasy", "Classici", "Saggistica", "Gialli/Noir", "Fantascienza", "Romanzi romantici", "Thriller psicologici", "Biografie", "Business", "Filosofia", "Storia", "Poesia", "Young adult", "Distopici", "Horror", "Libri motivazionali"]
-  },
-  social_life: {
-    stile: ["Clubbing/Discoteche", "Aperitivo Lungo", "Serate Chill", "Feste Private", "Giochi da Tavolo/D&D", "Networking", "Concerti e live", "Cinema con amici", "Cene fuori", "Bar tranquilli", "Pub e birrerie", "Serate improvvisate", "Weekend movimentati", "Introverso/casa", "Gruppi piccoli", "Grandi compagnie"]
-  },
-  cultura: {
-    interessi: ["Mostre d'Arte", "Storia e Archeologia", "Politica e Attualità", "Eventi Locali", "Filosofia", "Musei", "Teatro", "Letteratura", "Conferenze/Talk", "Psicologia", "Sociologia", "Temi ambientali", "Scienza", "Religione/Spiritualità", "Geopolitica", "Cultura pop", "Festival culturali"]
+    "Stile di Viaggio": ["Zaino in spalla", "Road Trip", "Luxury/Resort", "Città d'arte", "Natura Selvaggia", "Digital Nomad", "Campeggio/Van Life", "Crociere", "Weekend fuori porta", "Viaggi di gruppo"]
   }
 };
 
@@ -72,155 +58,162 @@ export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [comuni, setComuni] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Form State
+  // Dati Profilo
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [city, setCity] = useState("");
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [selectedInterests, setSelectedInterests] = useState([]);
+  const [selected, setSelected] = useState([]);
 
-  // Navigazione Catalogo State
+  // Navigazione Catalogo
   const [mainCat, setMainCat] = useState("musica");
-  const [subCat, setSubCat] = useState("Classica & Strumentale");
-  const [leafCat, setLeafCat] = useState("sottogeneri");
+  const [subCat, setSubCat] = useState(Object.keys(MEGA_CATALOGO.musica)[0]);
+  const [leafCat, setLeafCat] = useState(null);
 
-  // 1. CARICAMENTO INIZIALE
   useEffect(() => {
-    async function init() {
-      try {
-        const res = await fetch("https://raw.githubusercontent.com/matteocontrini/comuni-italiani/master/comuni.json");
-        const data = await res.json();
-        setComuni(data.map(c => c.nome));
-
-        const savedDraft = localStorage.getItem("circlo_onboarding_draft");
-        if (savedDraft) {
-          const draft = JSON.parse(savedDraft);
-          setFirstName(draft.firstName || "");
-          setLastName(draft.lastName || "");
-          setCity(draft.city || "");
-          setGender(draft.gender || "");
-          setBirthDate(draft.birthDate || "");
-          setSelectedInterests(draft.selectedInterests || []);
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (profile) {
+          setFirstName(profile.first_name || "");
+          setLastName(profile.last_name || "");
+          setCity(profile.city || "");
+          setGender(profile.gender || "");
+          setBirthDate(profile.birth_date || "");
+          setSelected(profile.affinity_data?.interests || []);
         }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-          if (profile) {
-            setFirstName(f => f || profile.first_name || "");
-            setLastName(l => l || profile.last_name || "");
-            setCity(c => c || profile.city || "");
-            setGender(g => g || profile.gender || "");
-            setBirthDate(b => b || profile.birth_date || "");
-            setSelectedInterests(i => i.length > 0 ? i : (profile.affinity_data?.interests || []));
-          }
-        }
-      } catch (e) {
-        console.error("Init error", e);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     }
-    init();
+    load();
   }, []);
 
-  // 2. AUTO-SALVATAGGIO LOCALE
-  useEffect(() => {
-    if (!loading) {
-      const draft = { firstName, lastName, city, gender, birthDate, selectedInterests };
-      localStorage.setItem("circlo_onboarding_draft", JSON.stringify(draft));
-    }
-  }, [firstName, lastName, city, gender, birthDate, selectedInterests, loading]);
-
-  const toggleInterest = (item) => {
-    setSelectedInterests(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
+  const toggle = (item) => {
+    setSelected(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
   };
 
   const handleSave = async () => {
     setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utente non autenticato");
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('profiles').update({
+      first_name: firstName, last_name: lastName, city: city.trim().toLowerCase(),
+      gender, birth_date: birthDate || null,
+      affinity_data: { interests: selected }
+    }).eq('id', user.id);
 
-      const normalizedCity = city.trim().toLowerCase();
-      const { error } = await supabase.from('profiles').update({
-        first_name: firstName,
-        last_name: lastName,
-        city: normalizedCity,
-        gender: gender,
-        birth_date: birthDate,
-        affinity_data: { interests: selectedInterests }
-      }).eq('id', user.id);
-
-      if (error) throw error;
-      localStorage.removeItem("circlo_onboarding_draft");
-      router.push("/dashboard");
-    } catch (err) {
-      alert(`Errore: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+    if (!error) router.push("/dashboard");
+    else alert("Errore: " + error.message);
+    setLoading(false);
   };
 
-  if (loading && step === 1) return <div style={styles.loading}>Caricamento...</div>;
+  // Logica per estrarre gli elementi filtrati
+  const getItems = () => {
+    let items = [];
+    const current = MEGA_CATALOGO[mainCat];
+
+    if (Array.isArray(current)) {
+      items = current;
+    } else {
+      const sub = current[subCat];
+      if (Array.isArray(sub)) {
+        items = sub;
+      } else {
+        // Se è un oggetto a 3 livelli (es musica)
+        if (!leafCat) {
+          // Se non ho ancora scelto il terzo livello, mostro tutto il contenuto della subCat
+          items = Object.values(sub).flat();
+        } else {
+          items = sub[leafCat] || [];
+        }
+      }
+    }
+
+    if (searchTerm) {
+      return items.filter(i => i.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+    return items;
+  };
+
+  if (loading) return <div style={styles.loading}>Caricamento...</div>;
 
   return (
     <main style={styles.main}>
       <div style={styles.card}>
+        
         {step === 1 ? (
           <div>
-            <h1 style={styles.title}>Il tuo Profilo</h1>
-            <input style={styles.input} placeholder="Nome" value={firstName} onChange={e => setFirstName(e.target.value)} />
-            <input style={styles.input} placeholder="Cognome" value={lastName} onChange={e => setLastName(e.target.value)} />
-            <select style={styles.input} value={gender} onChange={e => setGender(e.target.value)}>
-              <option value="">Genere</option>
-              <option value="M">Uomo</option>
-              <option value="F">Donna</option>
-              <option value="NB">Non-Binary</option>
-            </select>
-            <label style={styles.label}>Data di Nascita</label>
-            <input type="date" style={styles.input} value={birthDate} onChange={e => setBirthDate(e.target.value)} />
-            <input list="listaComuni" style={styles.input} placeholder="Città" value={city} onChange={e => setCity(e.target.value)} />
-            <datalist id="listaComuni">
-              {comuni.map(c => <option key={c} value={c} />)}
-            </datalist>
-            <button style={styles.btnNext} onClick={() => setStep(2)}>PROSEGUI AL DNA →</button>
+            <h2 style={styles.title}>Completa il tuo profilo</h2>
+            <div style={styles.formGrid}>
+              <input style={styles.input} placeholder="Nome" value={firstName} onChange={e=>setFirstName(e.target.value)} />
+              <input style={styles.input} placeholder="Cognome" value={lastName} onChange={e=>setLastName(e.target.value)} />
+              <select style={styles.input} value={gender} onChange={e=>setGender(e.target.value)}>
+                <option value="">Genere</option>
+                <option value="M">Uomo</option>
+                <option value="F">Donna</option>
+                <option value="NB">Non-Binary</option>
+              </select>
+              <input type="date" style={styles.input} value={birthDate} onChange={e=>setBirthDate(e.target.value)} />
+              <input style={{...styles.input, gridColumn: '1 / -1'}} placeholder="Città (es. Treviso)" value={city} onChange={e=>setCity(e.target.value)} />
+            </div>
+            <button style={styles.btnMain} onClick={()=>setStep(2)}>CONFIGURA DNA DIGITALE →</button>
           </div>
         ) : (
           <div>
             <div style={styles.header}>
-              <button onClick={() => setStep(1)} style={styles.btnBack}>← PROFILO</button>
-              <h2 style={{margin:0}}>DNA ({selectedInterests.length})</h2>
+              <button style={styles.btnText} onClick={()=>setStep(1)}>← DATI</button>
+              <h3 style={{margin:0}}>INTERESSI ({selected.length})</h3>
+              <button style={styles.btnSaveTop} onClick={handleSave}>SALVA</button>
             </div>
-            <div style={styles.navScroll}>
-              {Object.keys(CATALOGO_ESTESO).map(cat => (
-                <button key={cat} onClick={() => {setMainCat(cat); setSubCat(Object.keys(CATALOGO_ESTESO[cat])[0]);}} 
-                style={mainCat === cat ? styles.tabActive : styles.tab}>{cat.toUpperCase()}</button>
+
+            {/* Menu Categorie principali */}
+            <div style={styles.scrollRow}>
+              {Object.keys(MEGA_CATALOGO).map(cat => (
+                <button key={cat} onClick={()=>{setMainCat(cat); setSubCat(Object.keys(MEGA_CATALOGO[cat])[0]); setLeafCat(null);}} 
+                style={mainCat === cat ? styles.pillActive : styles.pill}>{cat.toUpperCase()}</button>
               ))}
             </div>
-            <div style={styles.navScroll}>
-              {Object.keys(CATALOGO_ESTESO[mainCat]).map(sub => (
-                <button key={sub} onClick={() => {setSubCat(sub); setLeafCat(Object.keys(CATALOGO_ESTESO[mainCat][sub])[0] || "lista")}}
-                style={subCat === sub ? styles.subActive : styles.sub}>{sub}</button>
-              ))}
-            </div>
-            {mainCat === "musica" && subCat !== "Abitudini Generali" && (
-              <div style={styles.leafBox}>
-                {Object.keys(CATALOGO_ESTESO[mainCat][subCat]).map(leaf => (
-                  <button key={leaf} onClick={() => setLeafCat(leaf)}
+
+            {/* Sotto-categorie (se esistono) */}
+            {typeof MEGA_CATALOGO[mainCat] === 'object' && !Array.isArray(MEGA_CATALOGO[mainCat]) && (
+              <div style={styles.scrollRow}>
+                {Object.keys(MEGA_CATALOGO[mainCat]).map(sub => (
+                  <button key={sub} onClick={()=>{setSubCat(sub); setLeafCat(null);}} 
+                  style={subCat === sub ? styles.subPillActive : styles.subPill}>{sub}</button>
+                ))}
+              </div>
+            )}
+
+            {/* Terzo livello (es. Generi vs Artisti) */}
+            {typeof MEGA_CATALOGO[mainCat][subCat] === 'object' && !Array.isArray(MEGA_CATALOGO[mainCat][subCat]) && (
+              <div style={styles.scrollRow}>
+                {Object.keys(MEGA_CATALOGO[mainCat][subCat]).map(leaf => (
+                  <button key={leaf} onClick={()=>setLeafCat(leaf)} 
                   style={leafCat === leaf ? styles.leafActive : styles.leaf}>{leaf.toUpperCase()}</button>
                 ))}
               </div>
             )}
+
+            {/* BARRA DI RICERCA */}
+            <input 
+              style={styles.searchInput} 
+              placeholder={`Cerca in ${leafCat || subCat || mainCat}...`} 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+
+            {/* GRIGLIA ITEMS */}
             <div style={styles.grid}>
-              {(CATALOGO_ESTESO[mainCat][subCat][leafCat] || CATALOGO_ESTESO[mainCat][subCat]["lista"] || CATALOGO_ESTESO[mainCat][subCat]).map(item => (
-                <div key={item} onClick={() => toggleInterest(item)} style={selectedInterests.includes(item) ? styles.itemActive : styles.item}>{item}</div>
+              {getItems().map(item => (
+                <div key={item} onClick={()=>toggle(item)} 
+                style={selected.includes(item) ? styles.itemActive : styles.item}>{item}</div>
               ))}
             </div>
-            <button style={styles.btnFinish} onClick={handleSave} disabled={loading}>{loading ? "SALVATAGGIO..." : "SALVA E CONCLUDI"}</button>
+
+            <button style={styles.btnSaveBottom} onClick={handleSave}>CONCLUDI E TROVA AFFINITÀ</button>
           </div>
         )}
       </div>
@@ -228,27 +221,27 @@ export default function Onboarding() {
   );
 }
 
-// QUESTO È L'OGGETTO CHE MANCAVA E CHE CAUSAVA L'ERRORE
 const styles = {
-  main: { minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'sans-serif' },
-  card: { background: 'white', padding: '30px', borderRadius: '24px', width: '100%', maxWidth: '800px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
-  title: { fontSize: '24px', marginBottom: '20px', color: '#1e293b' },
-  input: { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px', fontSize: '16px' },
-  label: { fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '5px' },
-  btnNext: { width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
-  header: { display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px' },
-  btnBack: { background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 'bold' },
-  navScroll: { display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '10px' },
-  tab: { padding: '8px 16px', borderRadius: '20px', border: '1px solid #e2e8f0', background: 'white', whiteSpace: 'nowrap', cursor: 'pointer' },
-  tabActive: { padding: '8px 16px', borderRadius: '20px', border: 'none', background: '#1e293b', color: 'white', whiteSpace: 'nowrap', fontWeight: 'bold' },
-  sub: { padding: '6px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '12px' },
-  subActive: { padding: '6px 12px', borderRadius: '10px', border: '1px solid #3b82f6', background: 'white', color: '#3b82f6', whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '12px' },
-  leafBox: { display: 'flex', gap: '5px', marginBottom: '10px' },
-  leaf: { padding: '4px 8px', borderRadius: '4px', border: 'none', background: '#e2e8f0', fontSize: '10px', cursor: 'pointer' },
-  leafActive: { padding: '4px 8px', borderRadius: '4px', border: 'none', background: '#64748b', color: 'white', fontSize: '10px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px', maxHeight: '300px', overflowY: 'auto', padding: '10px', background: '#f8fafc', borderRadius: '12px' },
-  item: { padding: '10px', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '12px', textAlign: 'center' },
-  itemActive: { padding: '10px', background: '#3b82f6', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '12px', textAlign: 'center' },
-  btnFinish: { width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: '#10b981', color: 'white', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer' },
-  loading: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }
+  main: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: '-apple-system, sans-serif' },
+  card: { background: 'white', padding: '30px', borderRadius: '30px', width: '100%', maxWidth: '800px', boxShadow: '0 20px 50px rgba(0,0,0,0.05)' },
+  title: { fontSize: '22px', fontWeight: '800', marginBottom: '20px', textAlign: 'center', color: '#0f172a' },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '25px' },
+  input: { padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none' },
+  searchInput: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #3b82f6', marginBottom: '15px', fontSize: '14px', outline: 'none' },
+  btnMain: { width: '100%', padding: '16px', borderRadius: '15px', border: 'none', background: '#0f172a', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
+  scrollRow: { display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '10px' },
+  pill: { padding: '8px 16px', borderRadius: '20px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' },
+  pillActive: { padding: '8px 16px', borderRadius: '20px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', whiteSpace: 'nowrap', fontSize: '12px' },
+  subPill: { padding: '6px 12px', borderRadius: '10px', background: '#f1f5f9', border: 'none', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' },
+  subPillActive: { padding: '6px 12px', borderRadius: '10px', background: '#94a3b8', color: 'white', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' },
+  leaf: { padding: '4px 10px', borderRadius: '6px', border: '1px solid #ddd', background: 'none', fontSize: '10px', cursor: 'pointer' },
+  leafActive: { padding: '4px 10px', borderRadius: '6px', background: '#333', color: 'white', border: 'none', fontSize: '10px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', maxHeight: '320px', overflowY: 'auto', padding: '15px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #f1f5f9' },
+  item: { padding: '12px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', textAlign: 'center', cursor: 'pointer', fontSize: '12px', transition: '0.2s' },
+  itemActive: { padding: '12px 8px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', textAlign: 'center', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
+  btnSaveBottom: { width: '100%', padding: '16px', borderRadius: '100px', border: 'none', background: '#10b981', color: 'white', fontWeight: 'bold', cursor: 'pointer', marginTop: '20px' },
+  btnSaveTop: { padding: '6px 15px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
+  btnText: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontWeight: 'bold' },
+  loading: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', color: '#64748b' }
 };
