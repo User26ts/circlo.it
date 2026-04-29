@@ -75,7 +75,6 @@ export default function Onboarding() {
   const [firstName, setFirstName] = useState("");
   const [city, setCity] = useState("");
   
-  // Stati per la Navigazione a Cascata
   const [mainCat, setMainCat] = useState("musica");
   const [subCat, setSubCat] = useState("Classica & Strumentale");
   const [leafCat, setLeafCat] = useState("sottogeneri");
@@ -117,7 +116,6 @@ export default function Onboarding() {
               <div style={{width: '60px'}}></div>
             </div>
 
-            {/* LIVELLO 1: MACRO CATEGORIE */}
             <div style={styles.scrollNav}>
               {Object.keys(CATALOGO_ESTESO).map(cat => (
                 <button key={cat} onClick={() => {setMainCat(cat); setSubCat(Object.keys(CATALOGO_ESTESO[cat])[0]); setLeafCat(Object.keys(CATALOGO_ESTESO[cat][Object.keys(CATALOGO_ESTESO[cat])[0]])[0] || "lista")}}
@@ -125,7 +123,6 @@ export default function Onboarding() {
               ))}
             </div>
 
-            {/* LIVELLO 2: SOTTO CATEGORIE */}
             <div style={styles.scrollNav}>
               {Object.keys(CATALOGO_ESTESO[mainCat]).map(sub => (
                 <button key={sub} onClick={() => {setSubCat(sub); setLeafCat(Object.keys(CATALOGO_ESTESO[mainCat][sub])[0] || "lista")}}
@@ -133,7 +130,6 @@ export default function Onboarding() {
               ))}
             </div>
 
-            {/* LIVELLO 3: FOGLIE (Se esistono più tipi come sottogeneri/artisti) */}
             {mainCat === "musica" && subCat !== "Abitudini Generali" && (
               <div style={{display: 'flex', gap: '10px', marginBottom: '15px', justifyContent: 'center'}}>
                 {Object.keys(CATALOGO_ESTESO[mainCat][subCat]).map(leaf => (
@@ -143,7 +139,6 @@ export default function Onboarding() {
               </div>
             )}
 
-            {/* GRIGLIA ELEMENTI */}
             <div style={styles.grid}>
               {(CATALOGO_ESTESO[mainCat][subCat][leafCat] || CATALOGO_ESTESO[mainCat][subCat]["lista"] || CATALOGO_ESTESO[mainCat][subCat]).map(item => (
                 <div key={item} onClick={() => toggleItem(item)} style={selected.includes(item) ? styles.itemActive : styles.item}>{item}</div>
@@ -173,5 +168,3 @@ const styles = {
   itemActive: { padding: '10px', background: '#3b82f6', color: 'white', borderRadius: '10px', border: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 'bold' },
   btnSave: { width: '100%', padding: '18px', borderRadius: '100px', border: 'none', background: '#10b981', color: 'white', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer' }
 };
-
-Il tuo mazzo di slide e il codice sono pronti! Ho organizzato il catalogo con una **struttura a tre livelli** (Macro -> Sotto-categoria -> Tipo Elemento) così gli utenti non si perdono tra migliaia di nomi. Fammi sapere se vuoi fare altre modifiche!
