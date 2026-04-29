@@ -1,51 +1,84 @@
-
 "use client";
 import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
-// --- IL CATALOGO È ORA INTEGRATO DIRETTAMENTE QUI ---
-const AFFINITY_CATALOG = {
+const CATALOGO_ESTESO = {
   musica: {
-    classica: {
-      barocca: ["Bach", "Vivaldi", "Handel", "Scarlatti", "Corelli", "Purcell", "Monteverdi"],
-      romantica: ["Chopin", "Rachmaninov", "Liszt", "Beethoven", "Schubert", "Brahms", "Tchaikovsky"],
-      moderna: ["Stravinsky", "Debussy", "Ravel", "Mahler", "Shostakovich"],
-      minimalista: ["Einaudi", "Max Richter", "Philip Glass", "Jóhannsson"]
+    "Classica & Strumentale": {
+      sottogeneri: ["Barocco", "Classico", "Romantico", "Tardo-Romantico", "Impressionismo", "Modernismo", "Contemporaneo", "Minimalismo", "Musica Sacra", "Opera", "Musica da Camera", "Sinfonica", "Pianoforte solo", "Musica per archi", "Musica corale", "Colonne Sonore Orchestrali", "Neoclassico", "Avanguardia"],
+      periodi: ["Medievale", "Rinascimentale", "Barocco", "Classico", "Romantico", "Moderno", "Contemporaneo"],
+      strumenti: ["Pianoforte", "Violino", "Violoncello", "Organo", "Orchestra completa", "Quartetto d'archi", "Voce lirica", "Arpa", "Fiati"],
+      compositori: ["Bach", "Vivaldi", "Handel", "Scarlatti", "Mozart", "Haydn", "Beethoven", "Schubert", "Chopin", "Liszt", "Brahms", "Tchaikovsky", "Mahler", "Wagner", "Verdi", "Puccini", "Debussy", "Ravel", "Satie", "Stravinsky", "Shostakovich", "Prokofiev", "Philip Glass", "Steve Reich", "Arvo Pärt", "Ludovico Einaudi", "Max Richter", "Nils Frahm", "Hans Zimmer", "John Williams", "Ennio Morricone"],
+      abitudini: ["Ascolto concentrato", "Concerti in teatro", "Studio della musica", "Seguire orchestre", "Collezione registrazioni storiche", "Preferenza per esecuzioni live", "Confronto direttori d'orchestra", "Playlist rilassamento", "Analisi tecnica"]
     },
-    contemporanea: {
-      trap_it: ["Sfera Ebbasta", "Lazza", "Marracash", "Guè", "Tedua", "Tony Effe", "Anna", "Shiva"],
-      urban_usa: ["Travis Scott", "Drake", "Kendrick Lamar", "Kanye West", "Playboi Carti"],
-      pop: ["Taylor Swift", "Ariana Grande", "The Weeknd", "Harry Styles", "Billie Eilish", "Lana Del Rey"]
+    "Rock & Alternative": {
+      sottogeneri: ["Rock Classico", "Hard Rock", "Punk", "Grunge", "Indie Rock", "Alternative", "Post-Rock"],
+      artisti: ["The Beatles", "Pink Floyd", "Led Zeppelin", "Queen", "Nirvana", "Arctic Monkeys", "Radiohead", "The Strokes", "Foo Fighters", "Tame Impala"]
+    },
+    "Hip Hop & Urban": {
+      sottogeneri: ["Rap Italiano", "Trap", "Old School Hip Hop", "Drill", "R&B", "Lo-Fi Hip Hop"],
+      artisti: ["Marracash", "Sfera Ebbasta", "Lazza", "Salmo", "Fabri Fibra", "Drake", "Kanye West", "Travis Scott", "Kendrick Lamar", "The Weeknd"]
+    },
+    "Elettronica & Dance": {
+      sottogeneri: ["House", "Techno", "EDM", "Ambient", "Drum & Bass", "Dubstep", "Synthwave"],
+      artisti: ["Daft Punk", "Avicii", "Calvin Harris", "Martin Garrix", "Deadmau5", "Charlotte de Witte", "Aphex Twin", "Eric Prydz", "Peggy Gou", "Skrillex"]
+    },
+    "Pop & Mainstream": {
+      sottogeneri: ["Pop internazionale", "Indie Pop", "K-Pop", "Pop elettronico", "Dance Pop"],
+      artisti: ["Taylor Swift", "Billie Eilish", "Dua Lipa", "Harry Styles", "Ariana Grande", "Ed Sheeran", "The Weeknd", "Olivia Rodrigo", "BTS", "Coldplay"]
+    },
+    "Jazz, Blues & Soul": {
+       sottogeneri: ["Jazz classico", "Smooth Jazz", "Blues", "Soul", "Funk", "Neo Soul"],
+       artisti: ["Miles Davis", "John Coltrane", "Louis Armstrong", "B.B. King", "Ray Charles", "Aretha Franklin", "Stevie Wonder", "Nina Simone", "Erykah Badu", "Herbie Hancock"]
+    },
+    "Abitudini Generali": {
+       lista: ["Concerti live", "Festival musicali", "Ascolto quotidiano", "Musica per lavorare/studiare", "Scoperta musica nuova", "Playlist curate", "Album completi", "Collezione vinili/CD", "Suono uno strumento", "Produco musica"]
     }
   },
-  scienze: {
-    pure: ["Matematica Pura", "Fisica Teorica", "Astrofisica", "Chimica Organica", "Biologia Molecolare"],
-    applicate: ["Robotica", "AI/Informatica", "Meccanica", "Aerospaziale", "Bioingegneria"]
-  },
-  cultura: {
-    filosofia: ["Stoicismo", "Esistenzialismo", "Nichilismo", "Idealismo", "Epicureismo", "Nietzsche", "Camus"],
-    hobby: ["Fotografia", "Pittura", "Gaming", "Scrittura", "Coding", "Vini Naturali", "Cucinare"]
+  cinema_tv: {
+    generi: ["Thriller", "Commedie Romantiche", "Anime", "Documentari", "Horror", "Fantascienza", "Crime/True Crime", "Sitcom", "Dramma", "Azione", "Avventura", "Fantasy", "Storico", "Biografico", "Noir", "Psicologico", "Supereroi", "Teen Drama", "Reality Show", "Animazione", "Western", "Mockumentary"],
+    piattaforme: ["Binge Watching", "Solo Cinema", "Serie TV Infinite", "Film d'autore", "Streaming serale", "Maratone nel weekend", "Guardo poco", "Rewatch comfort series", "Lingua originale", "Cinema indipendente", "Blockbuster", "YouTube/Shorts"]
   },
   sport: {
-    outdoor: ["Arrampicata", "Surf", "Skate", "Snowboard", "Trekking"],
-    classici: ["Tennis", "Padel", "Basket", "Calcio", "Nuoto", "Yoga", "Palestra"]
+    attivita: ["Palestra/Fitness", "Calcio", "Padel", "Trekking", "Crossfit", "Yoga/Pilates", "Nuoto", "Tennis", "Arrampicata", "Running", "Ciclismo", "Basket", "Arti marziali", "Sci/Snowboard", "Surf", "Skate", "Beach Volley", "Escursionismo", "Allenamenti a casa", "Functional training"]
+  },
+  viaggi: {
+    stile: ["Avventura/Zaino in spalla", "Città d'arte", "Mare e Relax", "Viaggi Low Cost", "Luxury Travel", "Solo Travel", "Road Trip", "Viaggi organizzati", "Weekend brevi", "Viaggi lunghi", "Esperienze autentiche", "Digital nomad", "Cultura", "Natura/Montagna", "On the road", "Viaggi spontanei", "Crociere", "Work & travel"]
+  },
+  cibo: {
+    gusti: ["Sushi/Giapponese", "Pizza Lover", "Cucina Tradizionale", "Sperimentale/Gourmet", "Vegan/Vegetariano", "Street Food", "Amo Cucinare", "Cucina etnica", "Fast food", "Dolci/Pasticceria", "Cibo salutare", "BBQ/Grigliate", "Cucina casalinga", "Food delivery", "Degustazioni vini", "Birre artigianali", "Caffè specialty", "Brunch lover"]
+  },
+  creativita: {
+    hobby: ["Disegno/Illustrazione", "Scrittura Creativa", "Fotografia", "Ceramica/Fai da te", "Pittura", "Montaggio Video", "Graphic Design", "Fashion design", "Calligrafia", "Contenuti social", "DIY/Artigianato", "Musica (comporre/suonare)", "Recitazione", "Danza", "Podcasting", "Storytelling", "Editing foto"]
+  },
+  tecnologia: {
+    interessi: ["Gaming PC", "Console (PS5/Xbox)", "Nintendo/Retro-gaming", "AI", "Cripto/Web3", "Gadget Tech", "Smart home", "Programmazione", "Startup/Innovazione", "Cybersecurity", "VR/AR", "Streaming/Twitch", "Hardware building", "App productivity", "Social media trends", "Tech news", "Automazione"]
+  },
+  lettura: {
+    generi: ["Manga/Fumetti", "Romanzi Fantasy", "Classici", "Saggistica", "Gialli/Noir", "Fantascienza", "Romanzi romantici", "Thriller psicologici", "Biografie", "Business", "Filosofia", "Storia", "Poesia", "Young adult", "Distopici", "Horror", "Libri motivazionali"]
+  },
+  social_life: {
+    stile: ["Clubbing/Discoteche", "Aperitivo Lungo", "Serate Chill", "Feste Private", "Giochi da Tavolo/D&D", "Networking", "Concerti e live", "Cinema con amici", "Cene fuori", "Bar tranquilli", "Pub e birrerie", "Serate improvvisate", "Weekend movimentati", "Introverso/casa", "Gruppi piccoli", "Grandi compagnie"]
+  },
+  cultura: {
+    interessi: ["Mostre d'Arte", "Storia e Archeologia", "Politica e Attualità", "Eventi Locali", "Filosofia", "Musei", "Teatro", "Letteratura", "Conferenze/Talk", "Psicologia", "Sociologia", "Temi ambientali", "Scienza", "Religione/Spiritualità", "Geopolitica", "Cultura pop", "Festival culturali"]
   }
 };
 
-// --- CONFIGURAZIONE SUPABASE ---
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
 export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  
-  // Dati Utente
   const [firstName, setFirstName] = useState("");
   const [city, setCity] = useState("");
-  const [mainCat, setMainCat] = useState(Object.keys(AFFINITY_CATALOG)[0]);
-  const [subCat, setSubCat] = useState("");
+  
+  // Stati per la Navigazione a Cascata
+  const [mainCat, setMainCat] = useState("musica");
+  const [subCat, setSubCat] = useState("Classica & Strumentale");
+  const [leafCat, setLeafCat] = useState("sottogeneri");
   const [selected, setSelected] = useState([]);
 
   const toggleItem = (item) => {
@@ -56,59 +89,68 @@ export default function Onboarding() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { error } = await supabase.from('profiles').update({
-        first_name: firstName,
-        city: city,
+      await supabase.from('profiles').update({
+        first_name: firstName, city: city,
         affinity_data: { interests: selected }
       }).eq('id', user.id);
-      
-      if (!error) router.push("/dashboard");
-      else console.error("Errore salvataggio:", error);
+      router.push("/dashboard");
     }
     setLoading(false);
   };
 
   return (
-    <main style={styles.container}>
-      <div style={styles.aurora}></div>
-      <div style={styles.glassCard}>
+    <main style={{minHeight: '100vh', background: '#f0f9ff', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif'}}>
+      <div style={{background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '900px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)'}}>
         
         {step === 1 ? (
-          <div>
-            <h1 style={styles.title}>Le tue Coordinate</h1>
-            <p style={styles.subtitle}>Come ti chiami e dove studi?</p>
-            <input style={styles.input} placeholder="Il tuo nome (es. Marco)" onChange={(e) => setFirstName(e.target.value)} />
-            <input style={styles.input} placeholder="Città (es. Treviso)" onChange={(e) => setCity(e.target.value)} />
-            <button style={styles.btnNext} onClick={() => setStep(2)}>PROSEGUI</button>
+          <div style={{textAlign: 'center'}}>
+            <h1>Benvenuto su CIRCLO</h1>
+            <input style={styles.input} placeholder="Il tuo Nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <input style={styles.input} placeholder="Tua Città" value={city} onChange={(e) => setCity(e.target.value)} />
+            <button style={styles.btnPrimary} onClick={() => setStep(2)}>PROSEGUI</button>
           </div>
         ) : (
           <div>
-            <h1 style={styles.title}>DNA Digitale</h1>
-            <div style={styles.nav}>
-              {Object.keys(AFFINITY_CATALOG).map(cat => (
-                <button key={cat} style={mainCat === cat ? styles.navBtnActive : styles.navBtn} onClick={() => {setMainCat(cat); setSubCat("");}}>
-                  {cat.toUpperCase()}
-                </button>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '20px'}}>
+              <button onClick={() => setStep(1)} style={{background: 'none', border: 'none', color: '#64748b', cursor: 'pointer'}}>← INDIETRO</button>
+              <h2 style={{margin: 0}}>DNA DIGITALE ({selected.length})</h2>
+              <div style={{width: '60px'}}></div>
+            </div>
+
+            {/* LIVELLO 1: MACRO CATEGORIE */}
+            <div style={styles.scrollNav}>
+              {Object.keys(CATALOGO_ESTESO).map(cat => (
+                <button key={cat} onClick={() => {setMainCat(cat); setSubCat(Object.keys(CATALOGO_ESTESO[cat])[0]); setLeafCat(Object.keys(CATALOGO_ESTESO[cat][Object.keys(CATALOGO_ESTESO[cat])[0]])[0] || "lista")}}
+                style={mainCat === cat ? styles.navActive : styles.nav}>{cat.toUpperCase()}</button>
               ))}
             </div>
-            <div style={styles.subNav}>
-              {Object.keys(AFFINITY_CATALOG[mainCat]).map(sub => (
-                <button key={sub} style={subCat === sub ? styles.subBtnActive : styles.subBtn} onClick={() => setSubCat(sub)}>
-                  {sub}
-                </button>
+
+            {/* LIVELLO 2: SOTTO CATEGORIE */}
+            <div style={styles.scrollNav}>
+              {Object.keys(CATALOGO_ESTESO[mainCat]).map(sub => (
+                <button key={sub} onClick={() => {setSubCat(sub); setLeafCat(Object.keys(CATALOGO_ESTESO[mainCat][sub])[0] || "lista")}}
+                style={subCat === sub ? styles.subActive : styles.sub}>{sub}</button>
               ))}
             </div>
+
+            {/* LIVELLO 3: FOGLIE (Se esistono più tipi come sottogeneri/artisti) */}
+            {mainCat === "musica" && subCat !== "Abitudini Generali" && (
+              <div style={{display: 'flex', gap: '10px', marginBottom: '15px', justifyContent: 'center'}}>
+                {Object.keys(CATALOGO_ESTESO[mainCat][subCat]).map(leaf => (
+                  <button key={leaf} onClick={() => setLeafCat(leaf)}
+                  style={leafCat === leaf ? styles.leafActive : styles.leaf}>{leaf.toUpperCase()}</button>
+                ))}
+              </div>
+            )}
+
+            {/* GRIGLIA ELEMENTI */}
             <div style={styles.grid}>
-              {subCat && AFFINITY_CATALOG[mainCat][subCat].map(item => (
-                <div key={item} style={selected.includes(item) ? styles.itemActive : styles.item} onClick={() => toggleItem(item)}>
-                  <span style={styles.gloss}></span>
-                  {item}
-                </div>
+              {(CATALOGO_ESTESO[mainCat][subCat][leafCat] || CATALOGO_ESTESO[mainCat][subCat]["lista"] || CATALOGO_ESTESO[mainCat][subCat]).map(item => (
+                <div key={item} onClick={() => toggleItem(item)} style={selected.includes(item) ? styles.itemActive : styles.item}>{item}</div>
               ))}
             </div>
-            <button style={styles.btnSave} onClick={handleFinish} disabled={loading}>
-              {loading ? "SALVATAGGIO..." : `CONFERMA (${selected.length} SCELTE)`}
-            </button>
+
+            <button style={styles.btnSave} onClick={handleFinish} disabled={loading}>{loading ? "SALVATAGGIO..." : "SALVA E SCOPRI CHI TI SOMIGLIA"}</button>
           </div>
         )}
       </div>
@@ -117,22 +159,19 @@ export default function Onboarding() {
 }
 
 const styles = {
-  container: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e0f2fe', position: 'relative', overflow: 'hidden', fontFamily: 'sans-serif' },
-  aurora: { position: 'absolute', width: '100%', height: '100%', background: 'radial-gradient(circle at 10% 10%, #bae6fd 0%, transparent 50%)', filter: 'blur(80px)', zIndex: 0 },
-  glassCard: { zIndex: 1, background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(20px)', borderRadius: '40px', padding: '40px', width: '100%', maxWidth: '800px', border: '1px solid white', boxShadow: '0 20px 50px rgba(0,0,0,0.05)', textAlign: 'center' },
-  title: { fontSize: '2rem', fontWeight: '800', color: '#1e293b', marginBottom: '10px' },
-  subtitle: { color: '#64748b', marginBottom: '25px' },
-  input: { width: '100%', padding: '15px', borderRadius: '15px', border: '1px solid #cbd5e1', marginBottom: '15px', outline: 'none' },
-  nav: { display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px' },
-  navBtn: { padding: '10px 18px', borderRadius: '100px', border: '1px solid #cbd5e1', background: 'white', cursor: 'pointer', fontSize: '0.8rem' },
-  navBtnActive: { padding: '10px 18px', borderRadius: '100px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold' },
-  subNav: { display: 'flex', gap: '5px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '25px' },
-  subBtn: { padding: '6px 12px', borderRadius: '100px', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.75rem' },
-  subBtnActive: { padding: '6px 12px', borderRadius: '100px', border: '1px solid #3b82f6', color: '#3b82f6', background: 'white', fontWeight: 'bold' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', maxHeight: '300px', overflowY: 'auto', padding: '10px' },
-  item: { position: 'relative', padding: '15px', background: 'white', borderRadius: '15px', border: '1px solid #e2e8f0', cursor: 'pointer', overflow: 'hidden' },
-  itemActive: { position: 'relative', padding: '15px', background: '#3b82f6', color: 'white', borderRadius: '15px', border: 'none', fontWeight: 'bold' },
-  gloss: { position: 'absolute', top: 0, left: 0, width: '100%', height: '40%', background: 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%)' },
-  btnNext: { width: '100%', padding: '15px', borderRadius: '100px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
-  btnSave: { marginTop: '20px', width: '100%', padding: '18px', borderRadius: '100px', border: 'none', background: '#10b981', color: 'white', fontWeight: 'bold', cursor: 'pointer' }
+  input: { width: '100%', padding: '15px', borderRadius: '15px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '16px' },
+  btnPrimary: { width: '100%', padding: '15px', borderRadius: '100px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
+  scrollNav: { display: 'flex', gap: '8px', overflowX: 'auto', padding: '10px 0', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' },
+  nav: { padding: '8px 15px', borderRadius: '20px', border: '1px solid #ddd', background: 'white', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '13px' },
+  navActive: { padding: '8px 15px', borderRadius: '20px', border: 'none', background: '#3b82f6', color: 'white', whiteSpace: 'nowrap', fontSize: '13px', fontWeight: 'bold' },
+  sub: { padding: '6px 12px', borderRadius: '12px', border: '1px solid #eee', background: '#f8fafc', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '12px' },
+  subActive: { padding: '6px 12px', borderRadius: '12px', border: '1px solid #3b82f6', color: '#3b82f6', background: 'white', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
+  leaf: { padding: '4px 10px', borderRadius: '5px', border: 'none', background: '#e2e8f0', color: '#475569', fontSize: '10px', cursor: 'pointer' },
+  leafActive: { padding: '4px 10px', borderRadius: '5px', border: 'none', background: '#475569', color: 'white', fontSize: '10px', cursor: 'pointer' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', maxHeight: '280px', overflowY: 'auto', padding: '10px', background: '#fafafa', borderRadius: '15px' },
+  item: { padding: '10px', background: 'white', borderRadius: '10px', border: '1px solid #eee', cursor: 'pointer', fontSize: '13px', textAlign: 'center' },
+  itemActive: { padding: '10px', background: '#3b82f6', color: 'white', borderRadius: '10px', border: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 'bold' },
+  btnSave: { width: '100%', padding: '18px', borderRadius: '100px', border: 'none', background: '#10b981', color: 'white', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer' }
 };
+
+Il tuo mazzo di slide e il codice sono pronti! Ho organizzato il catalogo con una **struttura a tre livelli** (Macro -> Sotto-categoria -> Tipo Elemento) così gli utenti non si perdono tra migliaia di nomi. Fammi sapere se vuoi fare altre modifiche!
