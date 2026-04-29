@@ -7,127 +7,58 @@ const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_pu
 
 export default function Discovery() {
   const [matches, setMatches] = useState([]);
-  const [myInterests, setMyInterests] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    async function getMatches() {
-      // 1. Prendi l'utente loggato
+    async function findPeople() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // 2. Prendi i miei interessi
-      const { data: myProfile } = await supabase
-        .from('profiles')
-        .select('affinity_data')
-        .eq('id', user.id)
-        .single();
       
-      const myTags = myProfile?.affinity_data?.interests || [];
-      setMyInterests(myTags);
+      // 1. Prendo il mio profilo per sapere la mia provincia
+      const { data: me } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      const myInterests = me.affinity_data?.interests || [];
 
-      // 3. Prendi TUTTI gli altri utenti (escluso te stesso)
-      const { data: otherUsers } = await supabase
-        .from('profiles')
+      // 2. Cerco altri nella STESSA PROVINCIA
+      const { data: others } = await supabase.from('profiles')
         .select('*')
+        .eq('city', me.city)
         .neq('id', user.id);
 
-      // 4. ALGORITMO DI AFFINITÀ
-      const rankedMatches = otherUsers.map(other => {
-        const otherTags = other.affinity_data?.interests || [];
-        // Trova l'intersezione (quelli che hanno entrambi)
-        const commonTags = myTags.filter(tag => otherTags.includes(tag));
-        
-        return {
-          ...other,
-          score: commonTags.length, // Il punteggio è il numero di passioni comuni
-          common: commonTags
-        };
+      // 3. Algoritmo di affinità (Ranking)
+      const scored = others.map(person => {
+        const tags = person.affinity_data?.interests || [];
+        const common = myInterests.filter(t => tags.includes(t));
+        return { ...person, score: common.length, common };
       })
-      .filter(m => m.score > 0) // Mostra solo chi ha almeno 1 cosa in comune
-      .sort((a, b) => b.score - a.score); // Ordina dal più simile al meno simile
+      .filter(p => p.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-      setMatches(rankedMatches);
+      setMatches(scored);
       setLoading(false);
     }
-
-    getMatches();
+    findPeople();
   }, []);
 
-const startChat = async (targetUserId) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  // 1. Controlla se esiste già una stanza tra i due
-  const { data: existingRooms } = await supabase
-    .from('chat_rooms')
-    .select('id')
-    .or(`and(user_1.eq.${user.id},user_2.eq.${targetUserId}),and(user_1.eq.${targetUserId},user_2.eq.${user.id})`)
-    .maybeSingle();
-
-  if (existingRooms) {
-    router.push(`/chat/${existingRooms.id}`);
-    return;
-  }
-
-  // 2. Se non esiste, creala
-  const { data: newRoom, error } = await supabase
-    .from('chat_rooms')
-    .insert([
-      { user_1: user.id, user_2: targetUserId }
-    ])
-    .select()
-    .single();
-
-  if (newRoom) {
-    router.push(`/chat/${newRoom.id}`);
-  } else {
-    alert("Errore nella creazione della chat");
-  }
-};
-
-  if (loading) return <div style={styles.loader}>Cercando anime affini...</div>;
+  const startChat = async (otherId) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    // Crea o trova stanza
+    const { data: room } = await supabase.from('chat_rooms')
+      .insert([{ user_1: user.id, user_2: otherId }])
+      .select().single();
+    router.push(`/chat/${room.id}`);
+  };
 
   return (
-    <main style={styles.main}>
-      <h2 style={styles.title}>Persone compatibili con te</h2>
-      <p style={styles.subtitle}>Basato su {myInterests.length} tue passioni</p>
-
-      <div style={styles.list}>
-        {matches.map(person => (
-          <div key={person.id} style={styles.card}>
-            <div style={styles.cardHeader}>
-              <span style={styles.name}>Utente Anonimo</span>
-              <span style={styles.scoreBadge}>{person.score} passioni in comune</span>
-            </div>
-            
-            <div style={styles.tagsContainer}>
-              {person.common.map(t => (
-                <span key={t} style={styles.tag}>#{t}</span>
-              ))}
-            </div>
-
-            <button onClick={() => startChat(person.id)} style={styles.chatBtn}>
-              Invia Messaggio Anonimo
-            </button>
-          </div>
-        ))}
-      </div>
-    </main>
+    <div style={{padding: '20px'}}>
+      <h1>Anime Affini a {matches[0]?.city || "tua città"}</h1>
+      {matches.map(p => (
+        <div key={p.id} style={styles.matchCard}>
+          <h3>Utente Anonimo</h3>
+          <p>Avete {p.score} interessi in comune: {p.common.join(", ")}</p>
+          <button onClick={() => startChat(p.id)}>Chatta</button>
+        </div>
+      ))}
+    </div>
   );
 }
-
-const styles = {
-  main: { padding: '20px', maxWidth: '600px', margin: '0 auto', fontFamily: 'sans-serif' },
-  title: { textAlign: 'center', color: '#1e293b' },
-  subtitle: { textAlign: 'center', color: '#64748b', marginBottom: '30px' },
-  card: { background: 'white', borderRadius: '16px', padding: '20px', marginBottom: '15px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
-  name: { fontWeight: 'bold', fontSize: '18px' },
-  scoreBadge: { background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
-  tagsContainer: { display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' },
-  tag: { fontSize: '12px', color: '#3b82f6', background: '#eff6ff', padding: '2px 8px', borderRadius: '4px' },
-  chatBtn: { width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
-  loader: { textAlign: 'center', marginTop: '50px', color: '#64748b' }
-};
+const styles = { matchCard: { border: '1px solid #ccc', padding: '15px', marginBottom: '10px', borderRadius: '10px' } };
