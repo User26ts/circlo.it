@@ -1,5 +1,6 @@
+
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
@@ -71,81 +72,108 @@ const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_pu
 export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [city, setCity] = useState("");
+  const [loading, setLoading] = useState(true); // Parte in loading per caricare i dati esistenti
   
-  const [mainCat, setMainCat] = useState("musica");
-  const [subCat, setSubCat] = useState("Classica & Strumentale");
-  const [leafCat, setLeafCat] = useState("sottogeneri");
+  // Dati Profilo
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [city, setCity] = useState("");
+  const [gender, setGender] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [selected, setSelected] = useState([]);
 
-  const toggleItem = (item) => {
-    setSelected(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
-  };
+  // Navigazione Catalogo
+  const [mainCat, setMainCat] = useState("musica");
 
-  const handleFinish = async () => {
+  // 1. RECUPERO DATI ESISTENTI
+  useEffect(() => {
+    async function loadUserData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (profile) {
+          setFirstName(profile.first_name || "");
+          setLastName(profile.last_name || "");
+          setCity(profile.city || "");
+          setGender(profile.gender || "");
+          setBirthDate(profile.birth_date || "");
+          setSelected(profile.affinity_data?.interests || []);
+        }
+      }
+      setLoading(false);
+    }
+    loadUserData();
+  }, []);
+
+  // 2. FUNZIONE SALVATAGGIO (con Normalizzazione Città)
+  const handleSave = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
+    
     if (user) {
-      await supabase.from('profiles').update({
-        first_name: firstName, city: city,
+      // Normalizziamo la città: tutto minuscolo e senza spazi extra
+      const normalizedCity = city.trim().toLowerCase();
+
+      const { error } = await supabase.from('profiles').update({
+        first_name: firstName,
+        last_name: lastName,
+        city: normalizedCity,
+        gender: gender,
+        birth_date: birthDate,
         affinity_data: { interests: selected }
       }).eq('id', user.id);
-      router.push("/dashboard");
+
+      if (!error) router.push("/dashboard");
+      else alert("Errore nel salvataggio");
     }
     setLoading(false);
   };
 
+  if (loading && step === 1) return <div style={styles.loading}>Caricamento profilo...</div>;
+
   return (
-    <main style={{minHeight: '100vh', background: '#f0f9ff', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif'}}>
-      <div style={{background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '900px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)'}}>
-        
+    <main style={styles.container}>
+      <div style={styles.card}>
         {step === 1 ? (
-          <div style={{textAlign: 'center'}}>
-            <h1>Benvenuto su CIRCLO</h1>
-            <input style={styles.input} placeholder="Il tuo Nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            <input style={styles.input} placeholder="Tua Città" value={city} onChange={(e) => setCity(e.target.value)} />
-            <button style={styles.btnPrimary} onClick={() => setStep(2)}>PROSEGUI</button>
+          <div>
+            <h1>Il tuo Profilo</h1>
+            <input style={styles.input} placeholder="Nome" value={firstName} onChange={e => setFirstName(e.target.value)} />
+            <input style={styles.input} placeholder="Cognome (Facoltativo)" value={lastName} onChange={e => setLastName(e.target.value)} />
+            
+            {/* Genere */}
+            <select style={styles.input} value={gender} onChange={e => setGender(e.target.value)}>
+              <option value="">Seleziona Genere</option>
+              <option value="M">Maschio</option>
+              <option value="F">Femmina</option>
+              <option value="Non-binary">Non-binary</option>
+              <option value="Altro">Altro</option>
+            </select>
+
+            {/* Data di Nascita */}
+            <label style={styles.label}>Data di Nascita (per calcolare l'età)</label>
+            <input type="date" style={styles.input} value={birthDate} onChange={e => setBirthDate(e.target.value)} />
+
+            {/* Città con suggerimenti */}
+            <input 
+              list="cities" 
+              style={styles.input} 
+              placeholder="Città (es. Treviso, Milano...)" 
+              value={city} 
+              onChange={e => setCity(e.target.value)} 
+            />
+            <datalist id="cities">
+              <option value="Milano" /><option value="Roma" /><option value="Padova" /><option value="Treviso" /><option value="Bologna" /><option value="Torino" /><option value="Venezia" />
+            </datalist>
+
+            <button style={styles.btnPrimary} onClick={() => setStep(2)}>MODIFICA DNA DIGITALE</button>
           </div>
         ) : (
           <div>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '20px'}}>
-              <button onClick={() => setStep(1)} style={{background: 'none', border: 'none', color: '#64748b', cursor: 'pointer'}}>← INDIETRO</button>
-              <h2 style={{margin: 0}}>DNA DIGITALE ({selected.length})</h2>
-              <div style={{width: '60px'}}></div>
-            </div>
-
-            <div style={styles.scrollNav}>
-              {Object.keys(CATALOGO_ESTESO).map(cat => (
-                <button key={cat} onClick={() => {setMainCat(cat); setSubCat(Object.keys(CATALOGO_ESTESO[cat])[0]); setLeafCat(Object.keys(CATALOGO_ESTESO[cat][Object.keys(CATALOGO_ESTESO[cat])[0]])[0] || "lista")}}
-                style={mainCat === cat ? styles.navActive : styles.nav}>{cat.toUpperCase()}</button>
-              ))}
-            </div>
-
-            <div style={styles.scrollNav}>
-              {Object.keys(CATALOGO_ESTESO[mainCat]).map(sub => (
-                <button key={sub} onClick={() => {setSubCat(sub); setLeafCat(Object.keys(CATALOGO_ESTESO[mainCat][sub])[0] || "lista")}}
-                style={subCat === sub ? styles.subActive : styles.sub}>{sub}</button>
-              ))}
-            </div>
-
-            {mainCat === "musica" && subCat !== "Abitudini Generali" && (
-              <div style={{display: 'flex', gap: '10px', marginBottom: '15px', justifyContent: 'center'}}>
-                {Object.keys(CATALOGO_ESTESO[mainCat][subCat]).map(leaf => (
-                  <button key={leaf} onClick={() => setLeafCat(leaf)}
-                  style={leafCat === leaf ? styles.leafActive : styles.leaf}>{leaf.toUpperCase()}</button>
-                ))}
-              </div>
-            )}
-
-            <div style={styles.grid}>
-              {(CATALOGO_ESTESO[mainCat][subCat][leafCat] || CATALOGO_ESTESO[mainCat][subCat]["lista"] || CATALOGO_ESTESO[mainCat][subCat]).map(item => (
-                <div key={item} onClick={() => toggleItem(item)} style={selected.includes(item) ? styles.itemActive : styles.item}>{item}</div>
-              ))}
-            </div>
-
-            <button style={styles.btnSave} onClick={handleFinish} disabled={loading}>{loading ? "SALVATAGGIO..." : "SALVA E SCOPRI CHI TI SOMIGLIA"}</button>
+            {/* Qui va la parte del catalogo che hai già, aggiungendo il tasto indietro e il save finale */}
+            <h2>DNA Digitale</h2>
+            {/* ... (logica catalogo a cascata) ... */}
+            <button style={styles.btnSave} onClick={handleSave}>AGGIORNA TUTTO</button>
+            <button style={styles.btnBack} onClick={() => setStep(1)}>INDIETRO</button>
           </div>
         )}
       </div>
@@ -154,17 +182,12 @@ export default function Onboarding() {
 }
 
 const styles = {
-  input: { width: '100%', padding: '15px', borderRadius: '15px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '16px' },
-  btnPrimary: { width: '100%', padding: '15px', borderRadius: '100px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
-  scrollNav: { display: 'flex', gap: '8px', overflowX: 'auto', padding: '10px 0', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' },
-  nav: { padding: '8px 15px', borderRadius: '20px', border: '1px solid #ddd', background: 'white', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '13px' },
-  navActive: { padding: '8px 15px', borderRadius: '20px', border: 'none', background: '#3b82f6', color: 'white', whiteSpace: 'nowrap', fontSize: '13px', fontWeight: 'bold' },
-  sub: { padding: '6px 12px', borderRadius: '12px', border: '1px solid #eee', background: '#f8fafc', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '12px' },
-  subActive: { padding: '6px 12px', borderRadius: '12px', border: '1px solid #3b82f6', color: '#3b82f6', background: 'white', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
-  leaf: { padding: '4px 10px', borderRadius: '5px', border: 'none', background: '#e2e8f0', color: '#475569', fontSize: '10px', cursor: 'pointer' },
-  leafActive: { padding: '4px 10px', borderRadius: '5px', border: 'none', background: '#475569', color: 'white', fontSize: '10px', cursor: 'pointer' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', maxHeight: '280px', overflowY: 'auto', padding: '10px', background: '#fafafa', borderRadius: '15px' },
-  item: { padding: '10px', background: 'white', borderRadius: '10px', border: '1px solid #eee', cursor: 'pointer', fontSize: '13px', textAlign: 'center' },
-  itemActive: { padding: '10px', background: '#3b82f6', color: 'white', borderRadius: '10px', border: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 'bold' },
-  btnSave: { width: '100%', padding: '18px', borderRadius: '100px', border: 'none', background: '#10b981', color: 'white', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer' }
+  container: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' },
+  card: { background: 'white', padding: '40px', borderRadius: '24px', width: '100%', maxWidth: '500px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' },
+  input: { width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' },
+  label: { display: 'block', marginBottom: '5px', fontSize: '12px', color: '#64748b' },
+  btnPrimary: { width: '100%', padding: '14px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
+  btnSave: { width: '100%', padding: '14px', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', marginTop: '20px' },
+  btnBack: { width: '100%', padding: '10px', background: 'none', color: '#64748b', border: 'none', cursor: 'pointer', marginTop: '10px' },
+  loading: { display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic' }
 };
