@@ -6,53 +6,7 @@ import { useRouter } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-const MEGA_CATALOGO = {
-  musica: {
-    "Rock & Metal": {
-      generi: ["Alternative Rock", "Hard Rock", "Punk Rock", "Heavy Metal", "Grunge", "Indie Rock", "Post-Punk", "Psychedelic Rock", "Prog Rock", "Shoegaze"],
-      artisti: ["The Beatles", "Pink Floyd", "Led Zeppelin", "Queen", "Nirvana", "Radiohead", "Arctic Monkeys", "The Smiths", "Metallica", "AC/DC", "The Rolling Stones", "The Cure", "Joy Division", "The Strokes", "Tame Impala", "Linkin Park", "Foo Fighters", "Red Hot Chili Peppers"]
-    },
-    "Pop & Elettronica": {
-      generi: ["Synth-pop", "Dance-pop", "Techno", "House", "Ambient", "Drum & Bass", "K-Pop", "Hyperpop", "Indie Pop", "Disco", "Lo-Fi"],
-      artisti: ["Daft Punk", "Taylor Swift", "The Weeknd", "Dua Lipa", "Harry Styles", "Billie Eilish", "Lana Del Rey", "Charli XCX", "Aphex Twin", "Peggy Gou", "Calvin Harris", "Depeche Mode", "Pet Shop Boys", "BTS", "Fred again.."]
-    },
-    "Hip Hop & Urban": {
-      generi: ["Rap Italiano", "Trap", "Old School", "Lo-fi Hip Hop", "Drill", "R&B", "Soul", "Grime"],
-      artisti: ["Marracash", "Guè", "Salmo", "Fabri Fibra", "Lazza", "Sfera Ebbasta", "Kendrick Lamar", "Drake", "Kanye West", "Travis Scott", "Tyler, The Creator", "Frank Ocean", "J. Cole", "Eminem", "Tupac", "Notorious B.I.G."]
-    },
-    "Classica & Jazz": {
-      generi: ["Barocco", "Classicismo", "Romanticismo", "Minimalismo", "Jazz Classico", "Fusion", "Bossa Nova", "Blues", "Opera", "Colonne Sonore"],
-      artisti: ["Bach", "Mozart", "Beethoven", "Chopin", "Debussy", "Miles Davis", "John Coltrane", "Bill Evans", "Chet Baker", "Ennio Morricone", "Hans Zimmer", "Ludovico Einaudi", "Max Richter"]
-    }
-  },
-  cibo: {
-    "Cucina Italiana": {
-      regioni: ["Toscana", "Siciliana", "Pugliese", "Emiliana", "Romana", "Campana", "Veneta", "Piemontese", "Ligure", "Calabrese"],
-      specialita: ["Pizza Contemporanea", "Pasta Fresca", "Street Food", "Vini Rossi", "Bollicine", "Formaggi stagionati", "Gelato Artigianale", "Tartufo", "Pasticceria Siciliana"]
-    },
-    "Cucina Internazionale": {
-      etnico: ["Giapponese/Sushi", "Cinese", "Messicano", "Indiano", "Thailandese", "Greco", "Mediorientale/Kebab", "Poke", "American BBQ", "Coreano", "Peruviano/Ceviche"]
-    },
-    "Stile di Vita": {
-      dieta: ["Vegan", "Vegetariano", "Senza Glutine", "Bio/Km 0", "Amo Cucinare", "Fine Dining/Gourmet", "Healthy Food", "Fast Food Lover"]
-    }
-  },
-  tempo_libero: {
-    "Cinema & TV": {
-      generi: ["Sci-Fi", "Horror", "Thriller", "Drammatico", "Sitcom", "Anime", "Documentari", "Crime/True Crime", "Noir", "Animazione d'autore", "Film d'essai"],
-      culto: ["Star Wars", "Marvel/DC", "Harry Potter", "Il Trono di Spade", "Studio Ghibli", "Wes Anderson", "Quentin Tarantino", "Christopher Nolan"]
-    },
-    "Sport & Outdoor": {
-      attivita: ["Palestra/Crossfit", "Calcio", "Padel", "Tennis", "Yoga/Pilates", "Trekking/Hiking", "Arrampicata", "Running", "Nuoto", "Ciclismo", "Basket", "Sci/Snowboard", "Surf", "Skate"]
-    },
-    "Hobby & Nerd": {
-      interessi: ["Gaming (PC/Console)", "Board Games/D&D", "Lettura/Libri", "Manga/Fumetti", "Fotografia", "Pittura/Disegno", "Scrittura", "Tecnologia/AI", "Collezionismo", "Astronomia", "Giardinaggio", "Fai da te"]
-    }
-  },
-  viaggi: {
-    "Stile di Viaggio": ["Zaino in spalla", "Road Trip", "Luxury/Resort", "Città d'arte", "Natura Selvaggia", "Digital Nomad", "Campeggio/Van Life", "Crociere", "Weekend fuori porta", "Viaggi di gruppo"]
-  }
-};
+import { MEGA_CATALOGO } from "./catalog";
 
 export default function Onboarding() {
   const router = useRouter();
