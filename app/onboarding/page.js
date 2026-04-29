@@ -2,7 +2,9 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { MEGA_CATALOGO } from "./catalog";
+
+// Assicurati che questo file esista, altrimenti incolla qui il tuo array MEGA_CATALOGO
+// import { MEGA_CATALOGO } from "./catalog"; 
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
@@ -13,13 +15,8 @@ export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [city, setCity] = useState(""); // Qui salviamo la Provincia
+  const [city, setCity] = useState(""); 
   const [selected, setSelected] = useState([]);
-  
-  // Navigazione catalogo
-  const [mainCat, setMainCat] = useState("musica");
-  const [subCat, setSubCat] = useState("Rock & Alternative");
 
   useEffect(() => {
     async function load() {
@@ -28,7 +25,6 @@ export default function Onboarding() {
         const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         if (p) {
           setFirstName(p.first_name || "");
-          setLastName(p.last_name || "");
           setCity(p.city || "");
           setSelected(p.affinity_data?.interests || []);
         }
@@ -43,8 +39,7 @@ export default function Onboarding() {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from('profiles').update({
       first_name: firstName,
-      last_name: lastName,
-      city: city, // Salvataggio pulito
+      city: city,
       affinity_data: { interests: selected }
     }).eq('id', user.id);
 
@@ -53,65 +48,55 @@ export default function Onboarding() {
     setLoading(false);
   };
 
-  if (loading) return <div>Caricamento...</div>;
+  if (loading) return <div style={styles.center}>Caricamento...</div>;
 
-return (
-  <main style={styles.main}>
-    <div style={styles.card}>
-      {step === 1 ? (
-        /* --- STEP 1: DATI PERSONALI --- */
-        <div style={styles.stepContainer}>
-          <h2 style={styles.title}>Iniziamo dalle basi</h2>
-          <p style={styles.subtitle}>Come ti chiami e dove ti trovi?</p>
-          
-          <input 
-            style={styles.input} 
-            placeholder="Il tuo nome" 
-            value={firstName} 
-            onChange={e => setFirstName(e.target.value)} 
-          />
-          
-          <select 
-            style={styles.input} 
-            value={city} 
-            onChange={e => setCity(e.target.value)}
-          >
-            <option value="">Seleziona la tua provincia</option>
-            {PROVINCE_ITALIANE.map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-
-          <button 
-            style={styles.button} 
-            onClick={() => {
-              if(!firstName || !city) alert("Inserisci nome e provincia!");
-              else setStep(2);
-            }}
-          >
-            Scegli i tuoi interessi →
-          </button>
-        </div>
-      ) : (
-        /* --- STEP 2: IL CATALOGO (Quello che era sparito) --- */
-        <div style={styles.stepContainer}>
-          <h2 style={styles.title}>Crea il tuo DNA</h2>
-          <p style={styles.subtitle}>Seleziona almeno 5 passioni per trovare i tuoi simili</p>
-          
-          {/* Qui deve esserci la tua griglia degli interessi (quella con MEGA_CATALOGO) */}
-          <div style={styles.grid}>
-             {/* ... inserisci qui il codice della griglia che avevi su github ... */}
+  return (
+    <main style={styles.main}>
+      <div style={styles.card}>
+        {step === 1 ? (
+          <div>
+            <h2 style={styles.title}>Dati Personali</h2>
+            <input 
+              style={styles.input} 
+              placeholder="Il tuo nome" 
+              value={firstName} 
+              onChange={e => setFirstName(e.target.value)} 
+            />
+            <select 
+              style={styles.input} 
+              value={city} 
+              onChange={e => setCity(e.target.value)}
+            >
+              <option value="">Seleziona la tua provincia</option>
+              {PROVINCE_ITALIANE.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+            <button style={styles.button} onClick={() => setStep(2)}>CONTINUA</button>
           </div>
+        ) : (
+          <div>
+            <h2 style={styles.title}>Scegli i tuoi interessi</h2>
+            <p style={styles.subtitle}>Seleziona cosa ti appassiona</p>
+            {/* Qui andrebbe il tuo componente griglia. Per ora un placeholder: */}
+            <div style={{padding: '20px', textAlign: 'center'}}>
+               [Griglia Interessi Catalogo]
+            </div>
+            <button style={styles.buttonSave} onClick={handleSave}>SALVA DNA</button>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
 
-          <button 
-            style={styles.buttonSave} 
-            onClick={handleSave}
-          >
-            {loading ? "Salvataggio..." : "Trova persone affini"}
-          </button>
-        </div>
-      )}
-    </div>
-  </main>
-);
-const styles = { /* ... gli stili che abbiamo già ... */ };
+const styles = {
+  main: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f3f4f6', padding: '20px' },
+  card: { backgroundColor: 'white', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', width: '100%', maxWidth: '400px' },
+  title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center' },
+  subtitle: { fontSize: '14px', color: '#666', marginBottom: '20px', textAlign: 'center' },
+  input: { width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '10px', border: '1px solid #ddd', fontSize: '16px' },
+  button: { width: '100%', padding: '12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
+  buttonSave: { width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
+  center: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }
+};
