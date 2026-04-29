@@ -55,11 +55,37 @@ export default function Discovery() {
     getMatches();
   }, []);
 
-  const startChat = async (targetUserId) => {
-    // Logica per creare la stanza e andare in chat
-    // (La implementiamo appena questa parte funziona)
-    alert("Creazione chat in corso...");
-  };
+const startChat = async (targetUserId) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // 1. Controlla se esiste già una stanza tra i due
+  const { data: existingRooms } = await supabase
+    .from('chat_rooms')
+    .select('id')
+    .or(`and(user_1.eq.${user.id},user_2.eq.${targetUserId}),and(user_1.eq.${targetUserId},user_2.eq.${user.id})`)
+    .maybeSingle();
+
+  if (existingRooms) {
+    router.push(`/chat/${existingRooms.id}`);
+    return;
+  }
+
+  // 2. Se non esiste, creala
+  const { data: newRoom, error } = await supabase
+    .from('chat_rooms')
+    .insert([
+      { user_1: user.id, user_2: targetUserId }
+    ])
+    .select()
+    .single();
+
+  if (newRoom) {
+    router.push(`/chat/${newRoom.id}`);
+  } else {
+    alert("Errore nella creazione della chat");
+  }
+};
 
   if (loading) return <div style={styles.loader}>Cercando anime affini...</div>;
 
