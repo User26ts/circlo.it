@@ -1,161 +1,196 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { useParams, useRouter } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-export default function ChatPage({ params }) {
+export default function ChatRoom() {
+  const { id: chatId } = useParams();
+  const router = useRouter();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const [roomData, setRoomData] = useState(null);
-  const [otherUser, setOtherUser] = useState(null);
   const [myId, setMyId] = useState(null);
-
-  // 1. Funzione per caricare i dati della chat e degli utenti
-  const fetchChatData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setMyId(user.id);
-
-    // Recupera dati stanza
-    const { data: room } = await supabase
-      .from('chat_rooms')
-      .select('*')
-      .eq('id', params.id)
-      .single();
-
-    if (room) {
-      setRoomData(room);
-      
-      // Identifica l'ID dell'altro utente
-      const otherId = room.user_1 === user.id ? room.user_2 : room.user_1;
-      
-      // Recupera profilo dell'altro utente
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', otherId)
-        .single();
-      
-      setOtherUser(profile);
-    }
-
-    // Recupera messaggi precedenti
-    const { data: msgs } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('room_id', params.id)
-      .order('created_at', { ascending: true });
-    
-    if (msgs) setMessages(msgs);
-  }, [params.id]);
+  const [partner, setPartner] = useState({ name: "Caricamento...", id: "" });
+  const [loading, setLoading] = useState(true);
+  const scrollRef = useRef();
 
   useEffect(() => {
-    fetchChatData();
+    async function initChat() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return router.push("/");
+        setMyId(session.user.id);
 
-    // 2. Realtime: Ascolta messaggi E cambiamenti alla stanza (consensi)
-    const channel = supabase
-      .channel(`room-${params.id}`)
-      .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${params.id}` },
-          (payload) => setMessages(prev => [...prev, payload.new])
-      )
-      .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'chat_rooms', filter: `id=eq.${params.id}` },
-          (payload) => setRoomData(payload.new)
-      )
-      .subscribe();
+        // 1. Recupero i dati della chat per sapere chi è l'altro utente
+        const { data: chatData, error: chatError } = await supabase
+          .from('chats')
+          .select('user_1, user_2')
+          .eq('id', chatId)
+          .single();
 
-    return () => supabase.removeChannel(channel);
-  }, [params.id, fetchChatData]);
+        if (chatError) throw chatError;
 
-  // 3. Invio messaggio
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
-    await supabase.from('messages').insert([
-      { room_id: params.id, sender_id: myId, content: newMessage }
-    ]);
-    setNewMessage("");
+        const otherId = chatData.user_1 === session.user.id ? chatData.user_2 : chatData.user_1;
+
+        // 2. Recupero il profilo del partner
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', otherId)
+          .single();
+        
+        setPartner({ name: profile?.first_name || "Utente Circlo", id: otherId });
+
+        // 3. Carico la cronologia dei messaggi
+        const { data: history } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('chat_id', chatId)
+          .order('created_at', { ascending: true });
+        
+        setMessages(history || []);
+        setLoading(false);
+
+        // 4. Sottoscrizione REALTIME per i nuovi messaggi
+        const channel = supabase
+          .channel(`chat_room_${chatId}`)
+          .on('postgres_changes', 
+            { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, 
+            (payload) => {
+              setMessages((current) => {
+                // Evitiamo duplicati se l'insert arriva sia da locale che da realtime
+                if (current.find(m => m.id === payload.new.id)) return current;
+                return [...current, payload.new];
+              });
+            }
+          )
+          .subscribe();
+
+        return () => supabase.removeChannel(channel);
+      } catch (err) {
+        console.error("Errore init chat:", err);
+        setLoading(false);
+      }
+    }
+
+    if (chatId) initChat();
+  }, [chatId, router]);
+
+  // Scroll automatico all'ultimo messaggio
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !myId) return;
+
+    const tempText = newMessage.trim();
+    setNewMessage(""); // Svuota subito l'input per feedback immediato
+
+    const { error } = await supabase.from('messages').insert({
+      chat_id: chatId,
+      sender_id: myId,
+      content: tempText
+    });
+
+    if (error) {
+      alert("Errore nell'invio del messaggio");
+      setNewMessage(tempText); // Ripristina il testo se fallisce
+    }
   };
 
-  // 4. Gestione Approvazione (Doppio Consenso)
-  const handleApprove = async () => {
-    if (!roomData || !myId) return;
-
-    const columnToUpdate = roomData.user_1 === myId ? 'user_1_approved' : 'user_2_approved';
-    
-    const { error } = await supabase
-      .from('chat_rooms')
-      .update({ [columnToUpdate]: true })
-      .eq('id', params.id);
-
-    if (error) alert("Errore: " + error.message);
-    else alert("Hai dato il tuo consenso!");
-  };
-
-  // Controllo se i dati sono sbloccati
-  const isUnlocked = roomData?.user_1_approved && roomData?.user_2_approved;
-  const iHaveApproved = roomData?.user_1 === myId ? roomData?.user_1_approved : roomData?.user_2_approved;
+  if (loading) return (
+    <div style={styles.center}>
+      <div style={styles.loader}>🧬</div>
+      <p>Entrando nel cerchio...</p>
+    </div>
+  );
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        {isUnlocked ? (
-          <div style={styles.unlockedInfo}>
-            <h3 style={styles.name}>{otherUser?.first_name} {otherUser?.last_name}</h3>
-            <p style={styles.subText}>📍 {otherUser?.city?.toUpperCase()}</p>
-          </div>
-        ) : (
-          <div style={styles.lockedInfo}>
-            <h3>Utente Compatibile</h3>
-            <p style={styles.subText}>Dati personali nascosti</p>
-            <button 
-              onClick={handleApprove} 
-              disabled={iHaveApproved}
-              style={iHaveApproved ? styles.btnWait : styles.btnApprove}
-            >
-              {iHaveApproved ? "In attesa dell'altro..." : "🤝 Scambia Dati Personali"}
-            </button>
-          </div>
-        )}
-      </div>
-      
-      <div style={styles.messagesBox}>
-        {messages.map(m => (
-          <div 
-            key={m.id} 
-            style={m.sender_id === myId ? styles.myMsg : styles.theirMsg}
-          >
-            {m.content}
-          </div>
-        ))}
+    <main style={styles.container}>
+      {/* HEADER FISSO */}
+      <header style={styles.header}>
+        <button onClick={() => router.push('/discovery')} style={styles.backBtn}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <div style={styles.avatarSmall}>👤</div>
+        <div style={styles.headerInfo}>
+          <h2 style={styles.partnerName}>{partner.name}</h2>
+          <span style={styles.status}>Online nel cerchio</span>
+        </div>
+      </header>
+
+      {/* AREA MESSAGGI */}
+      <div style={styles.chatArea}>
+        <div style={styles.infoBubble}>
+          I messaggi sono condivisi solo tra voi due. Buona conversazione!
+        </div>
+        
+        {messages.map((msg, index) => {
+          const isMine = msg.sender_id === myId;
+          return (
+            <div key={msg.id || index} style={isMine ? styles.myRow : styles.theirRow}>
+              <div style={isMine ? styles.myBubble : styles.theirBubble}>
+                {msg.content}
+                <div style={isMine ? styles.myTime : styles.theirTime}>
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={scrollRef} />
       </div>
 
-      <div style={styles.inputArea}>
-        <input 
-          style={styles.input}
-          placeholder="Scrivi un messaggio..."
-          value={newMessage} 
-          onChange={e => setNewMessage(e.target.value)} 
-          onKeyDown={e => e.key === 'Enter' && sendMessage()}
-        />
-        <button style={styles.sendBtn} onClick={sendMessage}>Invia</button>
-      </div>
-    </div>
+      {/* INPUT FISSO IN BASSO */}
+      <form onSubmit={handleSend} style={styles.inputContainer}>
+        <div style={styles.inputWrapper}>
+          <input 
+            style={styles.input} 
+            placeholder="Scrivi qualcosa di bello..." 
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+          />
+          <button type="submit" style={styles.sendBtn} disabled={!newMessage.trim()}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+      </form>
+    </main>
   );
 }
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc', fontFamily: 'sans-serif' },
-  header: { padding: '20px', background: 'white', borderBottom: '1px solid #e2e8f0', textAlign: 'center' },
-  name: { margin: 0, color: '#1e293b' },
-  subText: { margin: '5px 0', fontSize: '12px', color: '#64748b' },
-  btnApprove: { background: '#3b82f6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' },
-  btnWait: { background: '#e2e8f0', color: '#64748b', border: 'none', padding: '8px 16px', borderRadius: '20px', marginTop: '10px' },
-  messagesBox: { flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' },
-  myMsg: { alignSelf: 'flex-end', background: '#3b82f6', color: 'white', padding: '10px 15px', borderRadius: '15px 15px 0 15px', maxWidth: '70%' },
-  theirMsg: { alignSelf: 'flex-start', background: 'white', color: '#1e293b', padding: '10px 15px', borderRadius: '15px 15px 15px 0', maxWidth: '70%', border: '1px solid #e2e8f0' },
-  inputArea: { padding: '20px', background: 'white', display: 'flex', gap: '10px', borderTop: '1px solid #e2e8f0' },
-  input: { flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' },
-  sendBtn: { background: '#10b981', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }
+  container: { display: 'flex', flexDirection: 'column', height: '100vh', maxWidth: '600px', margin: '0 auto', backgroundColor: '#f1f5f9', fontFamily: '-apple-system, system-ui, sans-serif' },
+  
+  header: { padding: '15px 20px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 10 },
+  backBtn: { background: 'none', border: 'none', padding: '5px', cursor: 'pointer', color: '#64748b' },
+  avatarSmall: { width: '40px', height: '40px', borderRadius: '20px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' },
+  headerInfo: { display: 'flex', flexDirection: 'column' },
+  partnerName: { fontSize: '17px', fontWeight: '800', margin: 0, color: '#0f172a' },
+  status: { fontSize: '11px', color: '#10b981', fontWeight: 'bold', textTransform: 'uppercase' },
+
+  chatArea: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' },
+  infoBubble: { textAlign: 'center', fontSize: '12px', color: '#94a3b8', backgroundColor: '#fff', padding: '10px', borderRadius: '12px', margin: '10px 40px', border: '1px solid #e2e8f0' },
+  
+  myRow: { display: 'flex', justifyContent: 'flex-end', width: '100%' },
+  theirRow: { display: 'flex', justifyContent: 'flex-start', width: '100%' },
+  
+  myBubble: { backgroundColor: '#3b82f6', color: '#fff', padding: '12px 16px', borderRadius: '20px 20px 4px 20px', maxWidth: '80%', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)', position: 'relative' },
+  theirBubble: { backgroundColor: '#fff', color: '#1e293b', padding: '12px 16px', borderRadius: '20px 20px 20px 4px', maxWidth: '80%', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' },
+  
+  myTime: { fontSize: '10px', opacity: 0.8, textAlign: 'right', marginTop: '5px', fontWeight: '600' },
+  theirTime: { fontSize: '10px', color: '#94a3b8', textAlign: 'right', marginTop: '5px', fontWeight: '600' },
+
+  inputContainer: { padding: '20px', backgroundColor: '#fff', borderTop: '1px solid #e2e8f0' },
+  inputWrapper: { display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '20px', border: '1px solid #e2e8f0' },
+  input: { flex: 1, border: 'none', background: 'transparent', padding: '10px 15px', outline: 'none', fontSize: '15px', color: '#1e293b' },
+  sendBtn: { backgroundColor: '#3b82f6', border: 'none', width: '42px', height: '42px', borderRadius: '21px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s', ':disabled': { opacity: 0.5 } },
+
+  center: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#64748b' },
+  loader: { fontSize: '40px', marginBottom: '15px', animation: 'spin 2s linear infinite' }
 };
