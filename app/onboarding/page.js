@@ -2,6 +2,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+
+// CORREZIONE QUI: Importiamo esattamente i nomi esportati
 import { MEGA_CATALOGO, PROVINCE_ITALIANE } from "./catalog";
 
 const supabase = createClient(
@@ -12,9 +14,8 @@ const supabase = createClient(
 export default function OnboardingDNA() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1); // 1: Bio, 2: DNA
+  const [step, setStep] = useState(1);
   
-  // State Unificato
   const [profile, setProfile] = useState({
     firstName: "",
     birthDate: "",
@@ -23,7 +24,7 @@ export default function OnboardingDNA() {
     bio: ""
   });
 
-  // Calcolo Età Dinamico
+  // Logica Età
   const age = useMemo(() => {
     if (!profile.birthDate) return null;
     const today = new Date();
@@ -34,7 +35,6 @@ export default function OnboardingDNA() {
     return a;
   }, [profile.birthDate]);
 
-  // Validazione Step 1
   const isStep1Valid = profile.firstName && profile.birthDate && profile.city && age >= 18;
 
   const toggleTag = (tag) => {
@@ -48,14 +48,14 @@ export default function OnboardingDNA() {
 
   const handleFinalSave = async () => {
     if (profile.tags.length < 5) {
-      alert("Il tuo DNA è troppo debole! Seleziona almeno 5 interessi per generare affinità reali.");
+      alert("Seleziona almeno 5 elementi per definire il tuo DNA.");
       return;
     }
 
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Sessione non trovata");
+      if (!session) throw new Error("Sessione scaduta");
 
       const { error } = await supabase.from('profiles').update({
         first_name: profile.firstName,
@@ -77,10 +77,10 @@ export default function OnboardingDNA() {
     }
   };
 
-  // RENDERIZZAZIONE RICORSIVA DEL DNA (Il cuore del "Componi il tuo DNA")
+  // RENDERING RICORSIVO COMPLESSO
   const renderDNANode = (node, depth = 0) => {
     return Object.entries(node).map(([key, value]) => {
-      // Caso A: È un array di tag finali
+      // Se è un array (es. "Generi": [...])
       if (Array.isArray(value)) {
         return (
           <div key={key} style={styles.tagGroup}>
@@ -100,9 +100,9 @@ export default function OnboardingDNA() {
           </div>
         );
       } 
-      // Caso B: È un oggetto (sottocategoria)
+      // Se è un oggetto (es. "Musica": { ... })
       return (
-        <div key={key} style={{ ...styles.categorySection, marginLeft: depth * 10 }}>
+        <div key={key} style={{ ...styles.categorySection, borderLeft: depth === 0 ? '2px solid #222' : 'none', paddingLeft: depth === 0 ? '20px' : '0' }}>
           <h3 style={depth === 0 ? styles.mainCategoryTitle : styles.midCategoryTitle}>
             {key}
           </h3>
@@ -116,50 +116,35 @@ export default function OnboardingDNA() {
     <main style={styles.page}>
       <div style={styles.container}>
         
-        {/* PROGRESS BAR */}
+        {/* Progress bar Premium */}
         <div style={styles.progressContainer}>
-          <div style={{ ...styles.progressBar, width: step === 1 ? '50%' : '100%' }} />
+          <div style={{ ...styles.progressBar, width: step === 1 ? '30%' : '100%' }} />
         </div>
 
         {step === 1 ? (
           <section style={styles.card}>
-            <div style={styles.header}>
-              <h1 style={styles.title}>Le Basi</h1>
-              <p style={styles.subtitle}>Identità e localizzazione nel cerchio.</p>
-            </div>
-
+            <h1 style={styles.title}>L'Inizio</h1>
+            <p style={styles.subtitle}>Chi sei e dove ti trovi.</p>
+            
             <div style={styles.inputStack}>
-              <div style={styles.inputBox}>
-                <label style={styles.label}>NOME</label>
+              <input 
+                style={styles.input} placeholder="Nome" 
+                value={profile.firstName} onChange={e => setProfile({...profile, firstName: e.target.value})}
+              />
+              <div style={{position:'relative'}}>
                 <input 
-                  style={styles.input} 
-                  placeholder="Come ti chiamano gli amici?" 
-                  value={profile.firstName}
-                  onChange={e => setProfile({...profile, firstName: e.target.value})}
+                  type="date" style={styles.input} 
+                  value={profile.birthDate} onChange={e => setProfile({...profile, birthDate: e.target.value})}
                 />
+                {age && <span style={styles.ageLabel}>{age} anni</span>}
               </div>
-
-              <div style={styles.inputBox}>
-                <label style={styles.label}>DATA DI NASCITA {age && `(${age} anni)`}</label>
-                <input 
-                  type="date" 
-                  style={styles.input} 
-                  value={profile.birthDate}
-                  onChange={e => setProfile({...profile, birthDate: e.target.value})}
-                />
-              </div>
-
-              <div style={styles.inputBox}>
-                <label style={styles.label}>PROVINCIA DI RIFERIMENTO</label>
-                <select 
-                  style={styles.input} 
-                  value={profile.city}
-                  onChange={e => setProfile({...profile, city: e.target.value})}
-                >
-                  <option value="">Seleziona...</option>
-                  {PROVINCE_ITALIANE.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
+              <select 
+                style={styles.input} value={profile.city}
+                onChange={e => setProfile({...profile, city: e.target.value})}
+              >
+                <option value="">Seleziona Provincia</option>
+                {PROVINCE_ITALIANE.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
 
             <button 
@@ -167,28 +152,29 @@ export default function OnboardingDNA() {
               onClick={() => setStep(2)}
               style={isStep1Valid ? styles.primaryBtn : styles.disabledBtn}
             >
-              Configura DNA →
+              Componi DNA →
             </button>
           </section>
         ) : (
           <section style={styles.cardDNA}>
             <div style={styles.headerDNA}>
-              <button onClick={() => setStep(1)} style={styles.backBtn}>← Indietro</button>
-              <h1 style={styles.title}>Componi il tuo DNA</h1>
-              <p style={styles.subtitle}>Selezionati: <b>{profile.tags.length}</b> (minimo 5)</p>
+              <h1 style={styles.title}>DNA Explorer</h1>
+              <p style={styles.subtitle}>Selezionati: <b>{profile.tags.length}</b></p>
             </div>
 
             <div style={styles.scrollArea}>
+              {/* Qui usiamo il MEGA_CATALOGO importato */}
               {renderDNANode(MEGA_CATALOGO)}
             </div>
 
             <div style={styles.footer}>
+              <button onClick={() => setStep(1)} style={styles.backBtn}>Torna indietro</button>
               <button 
                 onClick={handleFinalSave}
                 disabled={loading || profile.tags.length < 5}
                 style={profile.tags.length >= 5 ? styles.saveBtn : styles.disabledBtn}
               >
-                {loading ? "Sincronizzazione..." : "Genera Affinità"}
+                {loading ? "Generazione..." : "Entra nel Cerchio"}
               </button>
             </div>
           </section>
@@ -198,68 +184,29 @@ export default function OnboardingDNA() {
   );
 }
 
+// STILI PREMIUM OBSIDIAN
 const styles = {
-  page: { 
-    height: '100vh', background: '#0a0a0a', display: 'flex', 
-    justifyContent: 'center', alignItems: 'center', color: '#fff', 
-    fontFamily: '-apple-system, system-ui, sans-serif' 
-  },
-  container: { width: '100%', maxWidth: '600px', padding: '20px', position: 'relative' },
-  progressContainer: { width: '100%', height: '4px', background: '#222', borderRadius: '2px', marginBottom: '20px' },
-  progressBar: { height: '100%', background: '#007AFF', borderRadius: '2px', transition: 'width 0.4s ease' },
-  
-  card: { 
-    background: '#161616', padding: '40px', borderRadius: '32px', 
-    boxShadow: '0 30px 60px rgba(0,0,0,0.5)', border: '1px solid #222' 
-  },
-  cardDNA: { 
-    background: '#161616', borderRadius: '32px', border: '1px solid #222',
-    display: 'flex', flexDirection: 'column', height: '85vh', overflow: 'hidden'
-  },
-  
-  header: { marginBottom: '30px' },
-  headerDNA: { padding: '30px 30px 10px 30px', borderBottom: '1px solid #222' },
-  title: { fontSize: '28px', fontWeight: '900', letterSpacing: '-1px', margin: '10px 0' },
-  subtitle: { color: '#888', fontSize: '15px' },
-  
-  inputStack: { display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '30px' },
-  inputBox: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  label: { fontSize: '11px', fontWeight: '800', color: '#555', letterSpacing: '1px' },
-  input: { 
-    background: '#222', border: '1px solid #333', padding: '16px', 
-    borderRadius: '14px', color: '#fff', fontSize: '16px', outline: 'none' 
-  },
-  
-  scrollArea: { flex: 1, overflowY: 'auto', padding: '20px 30px' },
-  categorySection: { marginBottom: '35px' },
-  mainCategoryTitle: { fontSize: '22px', color: '#007AFF', fontWeight: '900', marginBottom: '20px', borderBottom: '1px solid #222', paddingBottom: '10px' },
-  midCategoryTitle: { fontSize: '16px', color: '#fff', fontWeight: '700', margin: '15px 0' },
-  subCategoryTitle: { fontSize: '12px', color: '#555', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' },
-  
-  tagGroup: { marginBottom: '20px' },
-  tagWrapper: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-  tagInactive: { 
-    background: '#222', color: '#aaa', padding: '8px 16px', borderRadius: '20px', 
-    border: '1px solid #333', cursor: 'pointer', transition: '0.2s', fontSize: '14px' 
-  },
-  tagActive: { 
-    background: '#007AFF', color: '#fff', padding: '8px 16px', borderRadius: '20px', 
-    border: '1px solid #007AFF', cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-    boxShadow: '0 0 15px rgba(0,122,255,0.4)'
-  },
-  
-  footer: { padding: '20px 30px', borderTop: '1px solid #222', background: '#1a1a1a' },
-  primaryBtn: { 
-    width: '100%', padding: '18px', borderRadius: '16px', border: 'none', 
-    background: '#007AFF', color: '#fff', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' 
-  },
-  saveBtn: { 
-    width: '100%', padding: '18px', borderRadius: '16px', border: 'none', 
-    background: '#fff', color: '#000', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' 
-  },
-  disabledBtn: { 
-    width: '100%', padding: '18px', borderRadius: '16px', border: 'none', 
-    background: '#222', color: '#555', fontWeight: 'bold', fontSize: '16px', cursor: 'not-allowed' 
-  },
-  backBtn: { background: 'none', border: 'none', color: '#007AFF', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }
+  page: { height: '100vh', background: '#050505', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontFamily: 'Inter, sans-serif' },
+  container: { width: '100%', maxWidth: '650px', padding: '20px' },
+  progressContainer: { width: '100%', height: '2px', background: '#111', marginBottom: '30px' },
+  progressBar: { height: '100%', background: '#007AFF', transition: 'width 0.6s cubic-bezier(0.65, 0, 0.35, 1)' },
+  card: { background: '#0f0f0f', padding: '50px', borderRadius: '40px', border: '1px solid #1a1a1a', boxShadow: '0 40px 100px rgba(0,0,0,0.8)' },
+  cardDNA: { background: '#0f0f0f', borderRadius: '40px', border: '1px solid #1a1a1a', height: '80vh', display: 'flex', flexDirection: 'column' },
+  title: { fontSize: '32px', fontWeight: '900', letterSpacing: '-1.5px', marginBottom: '10px' },
+  subtitle: { color: '#666', marginBottom: '40px', fontSize: '16px' },
+  inputStack: { display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '40px' },
+  input: { background: '#151515', border: '1px solid #222', padding: '20px', borderRadius: '18px', color: '#fff', fontSize: '16px', outline: 'none' },
+  ageLabel: { position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', color: '#007AFF', fontWeight: 'bold' },
+  scrollArea: { flex: 1, overflowY: 'auto', padding: '0 40px 40px 40px' },
+  mainCategoryTitle: { fontSize: '24px', fontWeight: '900', color: '#007AFF', marginTop: '40px', marginBottom: '20px' },
+  midCategoryTitle: { fontSize: '18px', fontWeight: '700', color: '#eee', margin: '25px 0 15px 0' },
+  subCategoryTitle: { fontSize: '11px', color: '#444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' },
+  tagWrapper: { display: 'flex', flexWrap: 'wrap', gap: '10px' },
+  tagInactive: { background: '#151515', color: '#555', padding: '10px 20px', borderRadius: '14px', border: '1px solid #222', cursor: 'pointer', transition: '0.3s' },
+  tagActive: { background: '#007AFF', color: '#fff', padding: '10px 20px', borderRadius: '14px', border: '1px solid #007AFF', fontWeight: 'bold', boxShadow: '0 0 20px rgba(0,122,255,0.3)' },
+  footer: { padding: '30px 40px', borderTop: '1px solid #1a1a1a', display: 'flex', gap: '20px' },
+  primaryBtn: { width: '100%', padding: '20px', borderRadius: '20px', background: '#007AFF', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+  saveBtn: { flex: 2, padding: '20px', borderRadius: '20px', background: '#fff', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+  backBtn: { flex: 1, background: 'transparent', border: '1px solid #222', color: '#666', borderRadius: '20px', cursor: 'pointer' },
+  disabledBtn: { width: '100%', padding: '20px', borderRadius: '20px', background: '#111', color: '#333', border: 'none', cursor: 'not-allowed' }
 };
