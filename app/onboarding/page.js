@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { MEGA_CATALOGO, PROVINCE_ITALIANE } from "./catalog";
@@ -8,8 +8,22 @@ const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_pu
 
 export default function Onboarding() {
   const [formData, setFormData] = useState({ firstName: "", birthDate: "", city: "", tags: [] });
+  const [ageDisplay, setAgeDisplay] = useState(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Calcola l'età dinamicamente mentre l'utente inserisce la data
+  useEffect(() => {
+    if (formData.birthDate) {
+      const birth = new Date(formData.birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      setAgeDisplay(age >= 0 ? age : null);
+    }
+  }, [formData.birthDate]);
 
   const toggleTag = (tag) => {
     setFormData(prev => ({
@@ -21,13 +35,12 @@ export default function Onboarding() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.firstName || !formData.birthDate || !formData.city || formData.tags.length < 3) {
-      alert("Inserisci tutti i dati e seleziona almeno 3 interessi per un match accurato!");
+      alert("Completa tutti i campi e seleziona almeno 3 interessi!");
       return;
     }
 
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
-    
     if (!session) return router.push("/");
 
     const { error } = await supabase.from('profiles').update({ 
@@ -42,7 +55,6 @@ export default function Onboarding() {
     setLoading(false);
   };
 
-  // Funzione ricorsiva per renderizzare il tuo catalogo complesso
   const renderTags = (obj) => {
     return Object.entries(obj).map(([key, value]) => {
       if (Array.isArray(value)) {
@@ -51,11 +63,8 @@ export default function Onboarding() {
             <h5 style={styles.subCatTitle}>{key}</h5>
             <div style={styles.tagGrid}>
               {value.map(t => (
-                <button 
-                  key={t} type="button" 
-                  onClick={() => toggleTag(t)}
-                  style={formData.tags.includes(t) ? styles.tagActive : styles.tagInactive}
-                >
+                <button key={t} type="button" onClick={() => toggleTag(t)}
+                  style={formData.tags.includes(t) ? styles.tagActive : styles.tagInactive}>
                   {t}
                 </button>
               ))}
@@ -76,39 +85,25 @@ export default function Onboarding() {
   return (
     <main style={styles.container}>
       <div style={styles.glassCard}>
-        <header style={styles.header}>
-          <h1 style={styles.title}>Configura il tuo DNA</h1>
-          <p style={styles.subtitle}>Le tue passioni definiranno i tuoi incontri.</p>
-        </header>
-
+        <h1 style={styles.title}>Crea il tuo Profilo</h1>
         <form onSubmit={handleSave} style={styles.form}>
-          <section style={styles.section}>
-            <input 
-              style={styles.input} placeholder="Nome" 
-              value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} 
-            />
-            <input 
-              type="date" style={styles.input} 
-              value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} 
-            />
-            <select 
-              style={styles.input} value={formData.city} 
-              onChange={e => setFormData({...formData, city: e.target.value})}
-            >
+          <div style={styles.section}>
+            <input style={styles.input} placeholder="Nome" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} />
+            <div style={{position: 'relative'}}>
+                <input type="date" style={styles.input} value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
+                {ageDisplay !== null && <span style={styles.ageBadge}>{ageDisplay} anni</span>}
+            </div>
+            <select style={styles.input} value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})}>
               <option value="">Seleziona Provincia</option>
               {PROVINCE_ITALIANE.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-          </section>
-
-          <div style={styles.divider} />
-
-          <section style={styles.catalogArea}>
-            <p style={styles.catalogLabel}>Seleziona i tuoi interessi (min. 3)</p>
+          </div>
+          <div style={styles.catalogArea}>
+            <p style={styles.catalogLabel}>Seleziona il tuo DNA (Interessi)</p>
             {renderTags(MEGA_CATALOGO)}
-          </section>
-
+          </div>
           <button type="submit" disabled={loading} style={styles.submitBtn}>
-            {loading ? "Salvataggio..." : "Entra in Circlo"}
+            {loading ? "Salvataggio..." : "Inizia a Scoprire"}
           </button>
         </form>
       </div>
@@ -117,23 +112,20 @@ export default function Onboarding() {
 }
 
 const styles = {
-  container: { minHeight: '100vh', background: '#f5f7fa', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
-  glassCard: { background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)', borderRadius: '32px', padding: '35px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 50px rgba(0,0,0,0.05)', border: '1px solid #ffffff', maxHeight: '92vh', display: 'flex', flexDirection: 'column' },
-  header: { textAlign: 'center', marginBottom: '25px' },
-  title: { fontSize: '24px', fontWeight: '850', color: '#111', margin: '0 0 8px 0', letterSpacing: '-0.5px' },
-  subtitle: { fontSize: '14px', color: '#666', margin: 0 },
-  form: { overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', paddingRight: '5px' },
-  section: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  input: { padding: '15px', borderRadius: '14px', border: '1px solid #e1e4e8', fontSize: '15px', outline: 'none', background: '#fcfcfc', transition: 'border 0.2s' },
-  divider: { height: '1px', background: '#eee', margin: '10px 0' },
-  catalogArea: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  catalogLabel: { fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', color: '#999', letterSpacing: '0.5px' },
-  catBlock: { marginBottom: '20px', padding: '15px', background: '#fff', borderRadius: '18px', border: '1px solid #f0f0f0' },
-  catTitle: { fontSize: '18px', fontWeight: '800', margin: '0 0 15px 0', color: '#111' },
-  subCatBlock: { marginBottom: '15px' },
-  subCatTitle: { fontSize: '13px', fontWeight: '600', color: '#444', margin: '0 0 8px 0' },
-  tagGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-  tagInactive: { padding: '7px 14px', borderRadius: '10px', background: '#f5f7fa', border: '1px solid #e1e4e8', fontSize: '13px', cursor: 'pointer', transition: '0.2s', color: '#444' },
-  tagActive: { padding: '7px 14px', borderRadius: '10px', background: '#007AFF', border: '1px solid #007AFF', fontSize: '13px', cursor: 'pointer', color: '#fff', fontWeight: '600', boxShadow: '0 4px 12px rgba(0,122,255,0.2)' },
-  submitBtn: { padding: '18px', borderRadius: '16px', border: 'none', background: '#111', color: '#fff', fontWeight: '700', fontSize: '16px', cursor: 'pointer', marginTop: '10px', position: 'sticky', bottom: 0 },
+  container: { minHeight: '100vh', background: '#f8fafc', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', fontFamily: 'sans-serif' },
+  glassCard: { background: '#fff', borderRadius: '32px', padding: '30px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' },
+  title: { fontSize: '22px', fontWeight: '800', marginBottom: '20px', textAlign: 'center' },
+  form: { overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px' },
+  section: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  input: { padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none' },
+  ageBadge: { position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: '#eff6ff', color: '#3b82f6', padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' },
+  catalogArea: { marginTop: '10px' },
+  catalogLabel: { fontSize: '12px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' },
+  catBlock: { marginTop: '15px', borderTop: '1px solid #f1f5f9', paddingTop: '15px' },
+  catTitle: { fontSize: '16px', fontWeight: '700', marginBottom: '10px' },
+  subCatTitle: { fontSize: '13px', color: '#64748b', marginBottom: '8px' },
+  tagGrid: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
+  tagInactive: { padding: '6px 12px', borderRadius: '10px', background: '#f1f5f9', fontSize: '13px', cursor: 'pointer', border: 'none' },
+  tagActive: { padding: '6px 12px', borderRadius: '10px', background: '#3b82f6', color: '#fff', fontSize: '13px', cursor: 'pointer', border: 'none' },
+  submitBtn: { padding: '16px', borderRadius: '14px', background: '#0f172a', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none', position: 'sticky', bottom: 0 }
 };
