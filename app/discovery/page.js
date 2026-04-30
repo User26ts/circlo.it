@@ -5,105 +5,100 @@ import { useRouter } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-export default function DiscoveryPremium() {
+export default function DiscoveryDreamcore() {
   const [matches, setMatches] = useState([]);
-  const [myCity, setMyCity] = useState("");
+  const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // FUNZIONE PER CALCOLARE L'ETÀ
-  const calculateAge = (birthDate) => {
-    if (!birthDate) return null;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    return age;
+  const calculateAge = (dob) => {
+    if (!dob) return "";
+    const diff = Date.now() - new Date(dob).getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
   };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return router.push("/");
+    async function load() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return router.push("/");
 
-        const { data: me } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        
-        // Se mancano dati obbligatori, rimanda all'onboarding
-        if (!me?.city || !me?.first_name || !me?.birth_date) return router.push("/onboarding");
-        
-        setMyCity(me.city);
+      const { data: user } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+      if (!user?.city) return router.push("/onboarding");
+      setMe(user);
 
-        const myInterests = me.affinity_data?.interests || [];
-        const { data: others } = await supabase.from('profiles').select('*').eq('city', me.city).neq('id', session.user.id);
+      const myInterests = user.affinity_data?.interests || [];
+      const { data: others } = await supabase.from('profiles').select('*').eq('city', user.city).neq('id', session.user.id);
 
-        const processed = others.map(user => {
-          const common = myInterests.filter(tag => (user.affinity_data?.interests || []).includes(tag));
-          return { ...user, score: common.length, commonTags: common, age: calculateAge(user.birth_date) };
-        })
-        .filter(match => match.score > 0)
-        .sort((a, b) => b.score - a.score);
+      const scored = others.map(u => {
+        const theirInterests = u.affinity_data?.interests || [];
+        const common = myInterests.filter(t => theirInterests.includes(t));
+        return { ...u, common, age: calculateAge(u.birth_date) };
+      })
+      .filter(u => u.common.length > 0)
+      .sort((a,b) => b.common.length - a.common.length);
 
-        setMatches(processed);
-      } catch (err) { console.error(err); } finally { setLoading(false); }
+      setMatches(scored);
+      setLoading(false);
     }
-    loadData();
+    load();
   }, [router]);
 
   const openChat = async (targetId) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const ids = [session.user.id, targetId].sort();
+    const ids = [me.id, targetId].sort();
+    let { data: chat } = await supabase.from('chats').select('id').eq('user_1', ids[0]).eq('user_2', ids[1]).maybeSingle();
     
-    // Cerchiamo se esiste già
-    const { data: existing } = await supabase.from('chats').select('id').eq('user_1', ids[0]).eq('user_2', ids[1]).maybeSingle();
-    if (existing) return router.push(`/chat/${existing.id}`);
-
-    // Altrimenti creiamo
-    const { data: newChat, error } = await supabase.from('chats').insert({ user_1: ids[0], user_2: ids[1] }).select().single();
-    if (!error) router.push(`/chat/${newChat.id}`);
+    if (!chat) {
+      const { data: newChat } = await supabase.from('chats').insert({ user_1: ids[0], user_2: ids[1] }).select().single();
+      chat = newChat;
+    }
+    router.push(`/chat/${chat.id}`);
   };
 
-  if (loading) return <div style={styles.center}>🧬 Caricamento...</div>;
+  if (loading) return <div style={styles.center}>🌌 Sintonizzando le tue frequenze...</div>;
 
   return (
-    <main style={styles.main}>
+    <main style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Scoperte a {myCity}</h1>
-        <p style={styles.subtitle}>Connessioni nel raggio di km</p>
+        <h1 style={styles.title}>Vibrazioni a {me?.city}</h1>
+        <p style={styles.subtitle}>Anime affini scoperte nel raggio del tuo cerchio.</p>
       </header>
 
-      <div style={styles.list}>
+      <section style={styles.list}>
         {matches.map(m => (
-          <div key={m.id} style={styles.card}>
+          <div key={m.id} style={styles.matchCard}>
             <div style={styles.cardHeader}>
+              <div style={styles.avatarGlow}>👤</div>
               <div>
-                {/* MOSTRA NOME ED ETÀ */}
-                <h3 style={styles.userName}>{m.first_name}{m.age ? `, ${m.age}` : ""}</h3>
-                <p style={styles.matchScore}>🔥 {m.score} affinità</p>
+                <h2 style={styles.name}>{m.first_name}, {m.age}</h2>
+                <p style={styles.affinityText}>✨ {m.common.length} punti di contatto</p>
               </div>
-              <div style={styles.avatar}>👤</div>
             </div>
             
-            <div style={styles.tagGrid}>
-              {m.commonTags.map(t => <span key={t} style={styles.tag}>#{t}</span>)}
+            <div style={styles.dnaGrid}>
+              {m.common.map(tag => (
+                <span key={tag} style={styles.dnaTag}>🧬 {tag}</span>
+              ))}
             </div>
-            
-            <button onClick={() => openChat(m.id)} style={styles.chatBtn}>Inizia a parlare</button>
+
+            <button onClick={() => openChat(m.id)} style={styles.chatBtn}>Connettiti</button>
           </div>
         ))}
+        
         {matches.length === 0 && (
-          <div style={styles.empty}>Sei il primo pioniere! 🚀</div>
-        )}
-      </div>
-
-      <footer style={styles.inviteFixed}>
-        <div style={styles.inviteCard}>
-          <div style={{flex:1}}>
-            <p style={{fontWeight:'bold', margin:0, fontSize: '14px'}}>Fai crescere Circlo</p>
-            <p style={{margin:0, fontSize:'11px', color:'#64748b'}}>Più siamo, più match avrai.</p>
+          <div style={styles.emptyCard}>
+            <p style={{fontSize: '40px'}}>🛸</p>
+            <p>Sei un pioniere solitario... per ora.</p>
           </div>
-          <button style={styles.inviteBtn} onClick={() => window.open(`https://wa.me/?text=Vieni su Circlo!`)}>Invita</button>
+        )}
+      </section>
+
+      <footer style={styles.glassFooter}>
+        <div style={styles.footerFlex}>
+          <div>
+            <p style={styles.footerTitle}>Invita altri sognatori</p>
+            <p style={styles.footerSub}>Più siamo, più la rete vibra.</p>
+          </div>
+          <button style={styles.shareBtn} onClick={() => window.open('https://wa.me/?text=Entra nel cerchio!')}>Invita</button>
         </div>
       </footer>
     </main>
@@ -111,22 +106,40 @@ export default function DiscoveryPremium() {
 }
 
 const styles = {
-  main: { backgroundColor: '#f1f5f9', minHeight: '100vh', padding: '40px 20px 140px 20px', fontFamily: 'sans-serif' },
-  header: { textAlign: 'center', marginBottom: '30px' },
-  title: { fontSize: '28px', fontWeight: '900', margin: 0 },
-  subtitle: { fontSize: '15px', color: '#64748b' },
-  list: { display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '500px', margin: '0 auto' },
-  card: { backgroundColor: '#fff', borderRadius: '24px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
-  userName: { fontSize: '20px', fontWeight: '800', margin: 0 },
-  matchScore: { fontSize: '13px', color: '#10b981', fontWeight: '700', margin: 0 },
-  avatar: { width: '45px', height: '45px', borderRadius: '25px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' },
-  tagGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' },
-  tag: { padding: '5px 12px', backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '10px', fontSize: '11px', fontWeight: 'bold' },
-  chatBtn: { width: '100%', padding: '15px', borderRadius: '14px', border: 'none', backgroundColor: '#0f172a', color: '#fff', fontWeight: 'bold', cursor: 'pointer' },
-  inviteFixed: { position: 'fixed', bottom: '25px', left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 20px' },
-  inviteCard: { width: '100%', maxWidth: '460px', backgroundColor: '#fff', padding: '15px 20px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0' },
-  inviteBtn: { backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '10px', fontWeight: 'bold', marginLeft: '10px' },
-  center: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  empty: { textAlign: 'center', padding: '40px', color: '#64748b' }
+  container: { minHeight: '100vh', background: 'linear-gradient(to bottom, #fdf2f8, #eef2ff)', padding: '40px 20px 140px 20px', fontFamily: 'sans-serif' },
+  header: { textAlign: 'center', marginBottom: '40px' },
+  title: { fontSize: '32px', fontWeight: '900', color: '#1e1b4b', letterSpacing: '-1px' },
+  subtitle: { color: '#6366f1', fontSize: '15px', fontWeight: '600', opacity: 0.8 },
+  list: { maxWidth: '500px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' },
+  matchCard: { 
+    background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)', 
+    borderRadius: '28px', padding: '25px', border: '1px solid rgba(255,255,255,0.7)',
+    boxShadow: '0 10px 30px rgba(99, 102, 241, 0.05)'
+  },
+  cardHeader: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' },
+  avatarGlow: { 
+    width: '55px', height: '55px', borderRadius: '50%', background: '#fff', 
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px',
+    boxShadow: '0 0 15px rgba(99, 102, 241, 0.2)' 
+  },
+  name: { fontSize: '22px', fontWeight: '800', color: '#1e1b4b', margin: 0 },
+  affinityText: { fontSize: '13px', color: '#8b5cf6', fontWeight: 'bold', margin: 0 },
+  dnaGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '25px' },
+  dnaTag: { padding: '6px 12px', background: '#fff', borderRadius: '10px', fontSize: '12px', fontWeight: '700', color: '#6366f1' },
+  chatBtn: { 
+    width: '100%', padding: '16px', borderRadius: '16px', border: 'none', 
+    background: 'linear-gradient(90deg, #6366f1, #a855f7)', color: '#fff', 
+    fontWeight: '900', cursor: 'pointer', boxShadow: '0 5px 15px rgba(99, 102, 241, 0.3)' 
+  },
+  glassFooter: { position: 'fixed', bottom: '25px', left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 20px' },
+  footerFlex: { 
+    width: '100%', maxWidth: '460px', background: 'rgba(255,255,255,0.7)', 
+    backdropFilter: 'blur(20px)', padding: '15px 25px', borderRadius: '24px',
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    border: '1px solid rgba(255,255,255,0.8)', boxShadow: '0 15px 40px rgba(0,0,0,0.1)'
+  },
+  footerTitle: { margin: 0, fontWeight: '800', fontSize: '15px', color: '#1e1b4b' },
+  footerSub: { margin: 0, fontSize: '12px', color: '#6366f1' },
+  shareBtn: { padding: '12px 20px', borderRadius: '14px', border: 'none', background: '#22c55e', color: '#fff', fontWeight: 'bold' },
+  center: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366f1' }
 };
