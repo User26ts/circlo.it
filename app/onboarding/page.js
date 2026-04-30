@@ -5,16 +5,30 @@ import { useRouter } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-export default function OnboardingPremium() {
-  const [formData, setFormData] = useState({ firstName: "", birthDate: "", city: "" });
+// Lista città predefinita (puoi espanderla)
+const CITIES = ["Roma", "Milano", "Napoli", "Torino", "Palermo", "Genova", "Bologna", "Firenze", "Bari", "Catania", "Venezia", "Verona", "Messina", "Padova", "Trieste"];
+
+// Interessi per il DNA
+const INTEREST_TAGS = ["Musica", "Tech", "Arte", "Sport", "Gaming", "Viaggi", "Cinema", "Cucina", "Libri", "Natura", "Fitness", "Fotografia"];
+
+export default function OnboardingGlassy() {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({ firstName: "", birthDate: "", city: "", interests: [] });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    // VALIDAZIONE OBBLIGATORIA
-    if (!formData.firstName || !formData.birthDate || !formData.city) {
-      alert("Tutti i campi (Nome, Data di Nascita e Città) sono obbligatori per continuare!");
+  const toggleTag = (tag) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.includes(tag) 
+        ? prev.interests.filter(t => t !== tag) 
+        : [...prev.interests, tag]
+    }));
+  };
+
+  const handleFinish = async () => {
+    if (!formData.firstName || !formData.birthDate || !formData.city || formData.interests.length === 0) {
+      alert("Tutti i campi e almeno un interesse sono obbligatori!");
       return;
     }
 
@@ -26,68 +40,98 @@ export default function OnboardingPremium() {
       .update({ 
         first_name: formData.firstName, 
         birth_date: formData.birthDate, 
-        city: formData.city.toLowerCase().trim() 
+        city: formData.city,
+        affinity_data: { interests: formData.interests }
       })
       .eq('id', session.user.id);
 
-    if (error) {
-      alert("Errore nel salvataggio: " + error.message);
-    } else {
-      router.push("/discovery");
-    }
+    if (!error) router.push("/discovery");
+    else alert("Errore: " + error.message);
     setLoading(false);
   };
 
   return (
-    <main style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Benvenuto su Circlo 🧬</h1>
-        <p style={styles.subtitle}>Completa il tuo profilo per trovare persone simili a te.</p>
-        
-        <form onSubmit={handleSave} style={styles.form}>
-          <label style={styles.label}>Come ti chiami?</label>
-          <input 
-            style={styles.input} 
-            placeholder="Il tuo nome" 
-            value={formData.firstName}
-            onChange={e => setFormData({...formData, firstName: e.target.value})}
-            required
-          />
+    <main style={styles.background}>
+      <div style={styles.glassCard}>
+        {step === 1 ? (
+          <section>
+            <h1 style={styles.title}>Chi sei? ✨</h1>
+            <p style={styles.subtitle}>Le basi per iniziare il tuo viaggio.</p>
+            
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Nome</label>
+              <input style={styles.input} value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder="Il tuo nome..." />
+            </div>
 
-          <label style={styles.label}>Quando sei nato/a?</label>
-          <input 
-            type="date" 
-            style={styles.input} 
-            value={formData.birthDate}
-            onChange={e => setFormData({...formData, birthDate: e.target.value})}
-            required
-          />
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Data di Nascita</label>
+              <input type="date" style={styles.input} value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
+            </div>
 
-          <label style={styles.label}>In che città vivi?</label>
-          <input 
-            style={styles.input} 
-            placeholder="Es: Milano" 
-            value={formData.city}
-            onChange={e => setFormData({...formData, city: e.target.value})}
-            required
-          />
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Città</label>
+              <select style={styles.input} value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})}>
+                <option value="">Seleziona...</option>
+                {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
 
-          <button type="submit" disabled={loading} style={styles.btn}>
-            {loading ? "Salvataggio..." : "Inizia a scoprire"}
-          </button>
-        </form>
+            <button style={styles.nextBtn} onClick={() => setStep(2)}>Configura DNA →</button>
+          </section>
+        ) : (
+          <section>
+            <h1 style={styles.title}>Il tuo DNA 🧬</h1>
+            <p style={styles.subtitle}>Cosa ti fa vibrare? Scegli i tuoi interessi.</p>
+            
+            <div style={styles.tagContainer}>
+              {INTEREST_TAGS.map(tag => (
+                <button 
+                  key={tag} 
+                  onClick={() => toggleTag(tag)}
+                  style={formData.interests.includes(tag) ? styles.tagActive : styles.tagInactive}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            <div style={styles.btnRow}>
+              <button style={styles.backBtn} onClick={() => setStep(1)}>Indietro</button>
+              <button style={styles.finishBtn} onClick={handleFinish} disabled={loading}>
+                {loading ? "Salvataggio..." : "Entra nel Cerchio"}
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
 }
 
 const styles = {
-  container: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', padding: '20px' },
-  card: { backgroundColor: '#fff', padding: '40px', borderRadius: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', maxWidth: '400px', width: '100%', border: '1px solid #e2e8f0' },
-  title: { fontSize: '24px', fontWeight: '900', marginBottom: '10px', textAlign: 'center' },
-  subtitle: { fontSize: '14px', color: '#64748b', textAlign: 'center', marginBottom: '30px' },
-  form: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  label: { fontSize: '13px', fontWeight: 'bold', color: '#1e293b' },
-  input: { padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f1f5f9', outline: 'none' },
-  btn: { padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }
+  background: { 
+    height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'linear-gradient(135deg, #a5f3fc 0%, #ddd6fe 50%, #fbcfe8 100%)', // Dreamcore Palette
+    padding: '20px'
+  },
+  glassCard: { 
+    background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(15px)',
+    borderRadius: '32px', padding: '40px', width: '100%', maxWidth: '420px',
+    border: '1px solid rgba(255, 255, 255, 0.6)', boxShadow: '0 20px 40px rgba(0,0,0,0.05)'
+  },
+  title: { fontSize: '28px', fontWeight: '900', color: '#4c1d95', marginBottom: '8px', textAlign: 'center' },
+  subtitle: { fontSize: '15px', color: '#6d28d9', textAlign: 'center', marginBottom: '30px', opacity: 0.8 },
+  inputGroup: { marginBottom: '18px' },
+  label: { fontSize: '13px', fontWeight: '800', color: '#5b21b6', marginBottom: '6px', display: 'block', marginLeft: '5px' },
+  input: { 
+    width: '100%', padding: '14px', borderRadius: '16px', border: 'none', 
+    background: 'rgba(255, 255, 255, 0.5)', outline: 'none', fontSize: '15px', color: '#4c1d95'
+  },
+  tagContainer: { display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '30px' },
+  tagInactive: { padding: '10px 16px', borderRadius: '12px', border: '1px solid rgba(109, 40, 217, 0.2)', background: 'transparent', cursor: 'pointer', transition: '0.3s' },
+  tagActive: { padding: '10px 16px', borderRadius: '12px', border: '1px solid transparent', background: '#7c3aed', color: '#fff', cursor: 'pointer', transform: 'scale(1.05)' },
+  nextBtn: { width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' },
+  btnRow: { display: 'flex', gap: '10px' },
+  backBtn: { flex: 1, padding: '16px', borderRadius: '18px', border: 'none', background: 'rgba(255,255,255,0.3)', fontWeight: 'bold' },
+  finishBtn: { flex: 2, padding: '16px', borderRadius: '18px', border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 'bold' }
 };
