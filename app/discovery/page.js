@@ -5,125 +5,140 @@ import { useRouter } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-export default function DiscoveryLiminal() {
+export default function DiscoveryPremium() {
   const [matches, setMatches] = useState([]);
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Calcolo età preciso
-  const calcAge = (dob) => {
-    if (!dob) return "N/A";
-    const birthDate = new Date(dob);
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return "";
     const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age;
   };
 
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return router.push("/");
+    async function loadData() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return router.push("/");
 
-      const { data: user } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      if (!user?.city || !user?.birth_date) return router.push("/onboarding");
-      setMe(user);
+        const { data: user } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        if (!user?.city || !user?.birth_date) return router.push("/onboarding");
+        
+        setMe(user);
 
-      const myTags = user.affinity_data?.interests || [];
-      const { data: others } = await supabase.from('profiles').select('*').eq('city', user.city).neq('id', session.user.id);
+        const myInterests = user.affinity_data?.interests || [];
+        const { data: others } = await supabase.from('profiles').select('*').eq('city', user.city).neq('id', session.user.id);
 
-      const scored = others.map(u => {
-        const common = myTags.filter(t => (u.affinity_data?.interests || []).includes(t));
-        return { ...u, age: calcAge(u.birth_date), common };
-      }).filter(x => x.common.length > 0).sort((a, b) => b.common.length - a.common.length);
+        const processed = others.map(u => {
+          const common = myInterests.filter(tag => (u.affinity_data?.interests || []).includes(tag));
+          return { ...u, score: common.length, commonTags: common, age: calculateAge(u.birth_date) };
+        }).filter(match => match.score > 0).sort((a, b) => b.score - a.score);
 
-      setMatches(scored);
-      setLoading(false);
+        setMatches(processed);
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     }
-    init();
+    loadData();
   }, [router]);
 
-  // LA SOLUZIONE DEFINITIVA PER LE CHAT (Niente errori RLS)
+  // LOGICA CHAT INFALLIBILE
   const openChat = async (targetId) => {
     try {
       const ids = [me.id, targetId].sort();
       
-      // 1. Cerco la chat. Se esiste, la apro.
-      const { data: existing } = await supabase.from('chats').select('id').eq('user_1', ids[0]).eq('user_2', ids[1]).maybeSingle();
-      if (existing) {
-        return router.push(`/chat/${existing.id}`);
+      const { data: existingChat } = await supabase.from('chats').select('id').eq('user_1', ids[0]).eq('user_2', ids[1]).maybeSingle();
+      if (existingChat) {
+        return router.push(`/chat/${existingChat.id}`);
       }
 
-      // 2. Se non esiste, la creo e poi la apro.
-      const { data: newChat, error } = await supabase.from('chats').insert({ user_1: ids[0], user_2: ids[1] }).select('id').single();
+      const { data: newChat, error } = await supabase.from('chats').insert({ user_1: ids[0], user_2: ids[1] }).select().single();
       if (error) throw error;
       
       router.push(`/chat/${newChat.id}`);
-    } catch (e) {
-      alert("Errore nell'aprire la connessione: " + e.message);
+    } catch (err) {
+      alert("Errore di connessione. Riprova.");
     }
   };
 
-  if (loading) return <div style={styles.loader}>Ricerca presenze...</div>;
+  if (loading) return <div style={styles.center}>Caricamento profili...</div>;
 
   return (
-    <main style={styles.liminalSpace}>
+    <main style={styles.main}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Settore {me?.city}</h1>
-        <p style={styles.sub}>Entità rilevate con il tuo stesso DNA.</p>
+        <h1 style={styles.title}>Scoperte a {me?.city}</h1>
+        <p style={styles.subtitle}>Persone nel tuo cerchio con cui hai affinità</p>
       </header>
 
-      <div style={styles.grid}>
+      <section style={styles.list}>
         {matches.map(m => (
-          <div key={m.id} style={styles.glassCard}>
+          <div key={m.id} style={styles.card}>
             <div style={styles.cardTop}>
-              <h2 style={styles.name}>{m.first_name}, {m.age}</h2>
-              <span style={styles.score}>{m.common.length} Match</span>
+              <div style={styles.userInfo}>
+                <h2 style={styles.userName}>{m.first_name}, {m.age}</h2>
+                <div style={styles.badge}>🔥 {m.score} affinità</div>
+              </div>
+              <div style={styles.avatar}>👤</div>
             </div>
             
-            <div style={styles.tagList}>
-              {m.common.map(t => <span key={t} style={styles.tag}>[{t}]</span>)}
+            <div style={styles.tagWrap}>
+              {m.commonTags.map(tag => <span key={tag} style={styles.tag}>#{tag}</span>)}
             </div>
 
-            <button onClick={() => openChat(m.id)} style={styles.actionBtn}>Inizia Connessione</button>
+            <button style={styles.primaryAction} onClick={() => openChat(m.id)}>
+              Inizia a parlare
+            </button>
           </div>
         ))}
-        {matches.length === 0 && <div style={styles.empty}>Nessuna anomalia rilevata nel settore.</div>}
-      </div>
 
-      <div style={styles.inviteWidget}>
-        <div style={styles.inviteGlass}>
-          <div>
-            <p style={styles.invTitle}>Popola il livello</p>
-            <p style={styles.invSub}>Invia segnale ad altri.</p>
+        {matches.length === 0 && (
+          <div style={styles.emptyState}>
+            <span style={{fontSize: '40px'}}>🚀</span>
+            <h3>Nessun match ancora</h3>
+            <p>Invita i tuoi amici a iscriversi a Circlo a {me?.city}!</p>
           </div>
-          <button style={styles.invBtn} onClick={() => window.open(`https://wa.me/?text=Entra in Circlo.`)}>Invita</button>
+        )}
+      </section>
+
+      <footer style={styles.inviteBar}>
+        <div style={styles.inviteCard}>
+          <div style={{flex: 1}}>
+            <p style={styles.inviteTitle}>Fai crescere il cerchio</p>
+            <p style={styles.inviteSub}>Più siamo, più affinità troverai.</p>
+          </div>
+          <button style={styles.inviteButton} onClick={() => window.open(`https://wa.me/?text=Entra su Circlo!`)}>
+            Invita ora
+          </button>
         </div>
-      </div>
+      </footer>
     </main>
   );
 }
 
 const styles = {
-  liminalSpace: { minHeight: '100vh', background: 'linear-gradient(180deg, #f0ebd8 0%, #e3dcb8 100%)', padding: '30px 20px 120px 20px', fontFamily: 'monospace', color: '#2d2c25' },
-  header: { marginBottom: '30px', borderBottom: '1px solid rgba(0,0,0,0.1)', paddingBottom: '10px' },
-  title: { margin: 0, fontSize: '24px', textTransform: 'uppercase' },
-  sub: { margin: '5px 0 0 0', fontSize: '13px', color: '#5c5a4f' },
-  loader: { height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ebd8', fontFamily: 'monospace', color: '#5c5a4f' },
-  grid: { display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '500px', margin: '0 auto' },
-  glassCard: { background: 'rgba(255, 255, 255, 0.3)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.5)', padding: '20px', borderRadius: '4px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' },
-  cardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' },
-  name: { margin: 0, fontSize: '18px', fontWeight: 'bold' },
-  score: { fontSize: '12px', background: '#2d2c25', color: '#f0ebd8', padding: '2px 6px', borderRadius: '2px' },
-  tagList: { display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '20px' },
-  tag: { fontSize: '12px', color: '#5c5a4f' },
-  actionBtn: { width: '100%', padding: '12px', background: 'transparent', border: '1px solid #2d2c25', color: '#2d2c25', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold', textTransform: 'uppercase' },
-  empty: { textAlign: 'center', padding: '40px', color: '#8c8872', border: '1px dashed #8c8872' },
-  inviteWidget: { position: 'fixed', bottom: '20px', left: '20px', right: '20px', display: 'flex', justifyContent: 'center' },
-  inviteGlass: { width: '100%', maxWidth: '460px', background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255, 255, 255, 0.6)', padding: '15px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -5px 20px rgba(0,0,0,0.05)' },
-  invTitle: { margin: 0, fontWeight: 'bold', fontSize: '14px', textTransform: 'uppercase' },
-  invSub: { margin: 0, fontSize: '11px', color: '#5c5a4f' },
-  invBtn: { background: '#2d2c25', color: '#e3dcb8', border: 'none', padding: '8px 15px', fontFamily: 'inherit', fontWeight: 'bold', cursor: 'pointer', borderRadius: '2px' }
+  main: { backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: '-apple-system, system-ui, sans-serif', color: '#0f172a', paddingBottom: '120px' },
+  header: { padding: '40px 20px 20px 20px', textAlign: 'center' },
+  title: { fontSize: '32px', fontWeight: '900', letterSpacing: '-0.5px', margin: 0 },
+  subtitle: { color: '#64748b', fontSize: '15px', marginTop: '5px' },
+  list: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '550px', margin: '0 auto' },
+  card: { backgroundColor: '#ffffff', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', border: '1px solid #f1f5f9' },
+  cardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
+  userInfo: { display: 'flex', flexDirection: 'column', gap: '4px' },
+  userName: { fontSize: '22px', fontWeight: '800', margin: 0 },
+  badge: { color: '#10b981', fontWeight: '700', fontSize: '13px', display: 'inline-block' },
+  avatar: { width: '55px', height: '55px', borderRadius: '28px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' },
+  tagWrap: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '25px' },
+  tag: { padding: '6px 14px', backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '12px', fontSize: '13px', fontWeight: '600' },
+  primaryAction: { width: '100%', padding: '16px', borderRadius: '16px', border: 'none', backgroundColor: '#0f172a', color: '#fff', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' },
+  emptyState: { textAlign: 'center', padding: '60px 20px', backgroundColor: '#fff', borderRadius: '24px', border: '1px dashed #cbd5e1', color: '#64748b' },
+  inviteBar: { position: 'fixed', bottom: '20px', left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 20px' },
+  inviteCard: { width: '100%', maxWidth: '450px', backgroundColor: '#ffffff', padding: '15px 20px', borderRadius: '20px', boxShadow: '0 15px 35px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' },
+  inviteTitle: { fontSize: '15px', fontWeight: '800', margin: 0 },
+  inviteSub: { fontSize: '12px', color: '#64748b', margin: 0 },
+  inviteButton: { backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' },
+  center: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', color: '#64748b' }
 };
