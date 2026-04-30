@@ -5,13 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-export default function LiminalChat() {
+export default function PremiumChat() {
   const { id: chatId } = useParams();
   const router = useRouter();
   const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
+  const [inputText, setInputText] = useState("");
   const [myId, setMyId] = useState(null);
-  const [partner, setPartner] = useState("Sconosciuto");
+  const [partner, setPartner] = useState("Caricamento...");
   const scrollRef = useRef();
 
   useEffect(() => {
@@ -20,20 +20,21 @@ export default function LiminalChat() {
       if (!session) return router.push("/");
       setMyId(session.user.id);
 
-      const { data: chat } = await supabase.from('chats').select('user_1, user_2').eq('id', chatId).single();
-      if (chat) {
-        const otherId = chat.user_1 === session.user.id ? chat.user_2 : chat.user_1;
-        const { data: p } = await supabase.from('profiles').select('first_name').eq('id', otherId).single();
-        setPartner(p?.first_name || "Entità");
-      }
-
       const { data: history } = await supabase.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
       setMessages(history || []);
 
-      const channel = supabase.channel(`room_${chatId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, 
-          (payload) => setMessages(prev => [...prev, payload.new])
-        ).subscribe();
+      const { data: chatInfo } = await supabase.from('chats').select('user_1, user_2').eq('id', chatId).single();
+      if (chatInfo) {
+        const otherId = chatInfo.user_1 === session.user.id ? chatInfo.user_2 : chatInfo.user_1;
+        const { data: p } = await supabase.from('profiles').select('first_name').eq('id', otherId).single();
+        setPartner(p?.first_name || "Utente Circlo");
+      }
+
+      const channel = supabase.channel(`room:${chatId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload) => {
+          setMessages(prev => [...prev, payload.new]);
+        })
+        .subscribe();
 
       return () => supabase.removeChannel(channel);
     }
@@ -42,24 +43,30 @@ export default function LiminalChat() {
 
   useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const send = async (e) => {
+  const sendMessage = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    const { error } = await supabase.from('messages').insert({ chat_id: chatId, sender_id: myId, content: text.trim() });
-    if (!error) setText("");
+    if (!inputText.trim()) return;
+    const { error } = await supabase.from('messages').insert({ chat_id: chatId, sender_id: myId, content: inputText.trim() });
+    if (!error) setInputText("");
   };
 
   return (
-    <main style={styles.liminalSpace}>
+    <main style={styles.container}>
       <header style={styles.header}>
-        <button onClick={() => router.push('/discovery')} style={styles.backBtn}>[ INDIETRO ]</button>
-        <span style={styles.partnerName}>Terminale di: {partner}</span>
+        <button style={styles.backBtn} onClick={() => router.push('/discovery')}>←</button>
+        <div style={styles.headerUser}>
+          <div style={styles.headerAvatar}>👤</div>
+          <div>
+            <h3 style={styles.headerName}>{partner}</h3>
+            <p style={styles.headerStatus}>Nel tuo cerchio</p>
+          </div>
+        </div>
       </header>
 
-      <div style={styles.chatBox}>
-        {messages.map((m, i) => (
-          <div key={i} style={m.sender_id === myId ? styles.rowRight : styles.rowLeft}>
-            <div style={m.sender_id === myId ? styles.msgMine : styles.msgTheirs}>
+      <div style={styles.messagesArea}>
+        {messages.map((m, idx) => (
+          <div key={idx} style={m.sender_id === myId ? styles.rowRight : styles.rowLeft}>
+            <div style={m.sender_id === myId ? styles.bubbleMine : styles.bubbleTheirs}>
               {m.content}
             </div>
           </div>
@@ -67,30 +74,33 @@ export default function LiminalChat() {
         <div ref={scrollRef} />
       </div>
 
-      <form onSubmit={send} style={styles.inputArea}>
+      <form style={styles.inputForm} onSubmit={sendMessage}>
         <input 
           style={styles.input} 
-          placeholder="Digita messaggio..." 
-          value={text} 
-          onChange={e => setText(e.target.value)} 
+          placeholder="Scrivi un messaggio..." 
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
         />
-        <button type="submit" style={styles.sendBtn}>INVIA</button>
+        <button type="submit" style={styles.sendBtn}>Invia</button>
       </form>
     </main>
   );
 }
 
 const styles = {
-  liminalSpace: { display: 'flex', flexDirection: 'column', height: '100vh', maxWidth: '600px', margin: '0 auto', background: '#f0ebd8', fontFamily: 'monospace', color: '#2d2c25' },
-  header: { padding: '15px', background: 'rgba(255, 255, 255, 0.3)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  backBtn: { background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold', color: '#5c5a4f' },
-  partnerName: { fontWeight: 'bold', textTransform: 'uppercase' },
-  chatBox: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' },
+  container: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc', maxWidth: '600px', margin: '0 auto', fontFamily: '-apple-system, system-ui, sans-serif' },
+  header: { padding: '15px 20px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px', position: 'sticky', top: 0, zIndex: 10 },
+  backBtn: { border: 'none', background: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' },
+  headerUser: { display: 'flex', alignItems: 'center', gap: '12px' },
+  headerAvatar: { width: '40px', height: '40px', borderRadius: '20px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' },
+  headerName: { margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' },
+  headerStatus: { margin: 0, fontSize: '12px', color: '#10b981', fontWeight: '600' },
+  messagesArea: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' },
   rowRight: { display: 'flex', justifyContent: 'flex-end' },
   rowLeft: { display: 'flex', justifyContent: 'flex-start' },
-  msgMine: { background: '#2d2c25', color: '#e3dcb8', padding: '10px 15px', borderRadius: '4px 4px 0 4px', maxWidth: '80%' },
-  msgTheirs: { background: 'rgba(255, 255, 255, 0.5)', border: '1px solid rgba(0,0,0,0.1)', padding: '10px 15px', borderRadius: '4px 4px 4px 0', maxWidth: '80%' },
-  inputArea: { padding: '15px', background: 'rgba(255, 255, 255, 0.3)', backdropFilter: 'blur(10px)', borderTop: '1px solid rgba(0,0,0,0.1)', display: 'flex', gap: '10px' },
-  input: { flex: 1, padding: '12px', border: '1px solid rgba(0,0,0,0.2)', background: 'rgba(255,255,255,0.6)', outline: 'none', fontFamily: 'inherit' },
-  sendBtn: { padding: '0 20px', background: '#2d2c25', color: '#e3dcb8', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' }
+  bubbleMine: { backgroundColor: '#3b82f6', color: '#fff', padding: '12px 16px', borderRadius: '20px 20px 4px 20px', maxWidth: '75%', fontSize: '15px', boxShadow: '0 4px 10px rgba(59,130,246,0.15)', lineHeight: '1.4' },
+  bubbleTheirs: { backgroundColor: '#fff', color: '#334155', padding: '12px 16px', borderRadius: '20px 20px 20px 4px', maxWidth: '75%', fontSize: '15px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', lineHeight: '1.4' },
+  inputForm: { padding: '15px 20px', backgroundColor: '#fff', display: 'flex', gap: '12px', borderTop: '1px solid #e2e8f0' },
+  input: { flex: 1, padding: '14px 20px', borderRadius: '24px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', outline: 'none', fontSize: '15px', color: '#0f172a' },
+  sendBtn: { backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '0 20px', borderRadius: '24px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }
 };
