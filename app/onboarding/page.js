@@ -37,7 +37,6 @@ export default function Onboarding() {
 
   const toggleTag = (t) => setSelected(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
 
-  // Logica di ricerca profonda
   const getAllTags = (obj) => {
     let res = [];
     for (let k in obj) {
@@ -51,19 +50,23 @@ export default function Onboarding() {
 
   const handleSave = async () => {
     setSaving(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    await supabase.from('profiles').upsert({
-      id: session.user.id, first_name: firstName, birth_date: birthDate, city,
-      affinity_data: { interests: selected }, updated_at: new Date().toISOString()
-    });
-    router.push("/discovery");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { error } = await supabase.from('profiles').upsert({
+        id: session.user.id, first_name: firstName, birth_date: birthDate, city,
+        affinity_data: { interests: selected }, updated_at: new Date().toISOString()
+      });
+      if (error) throw error;
+      router.push("/discovery");
+    } catch (e) {
+      alert("Errore al salvataggio: " + e.message);
+      setSaving(false);
+    }
   };
 
-  // RENDERING RICORSIVO AVANZATO
   const renderDNA = (data, level = 0) => {
     return Object.keys(data).map(key => {
       const val = data[key];
-      
       if (Array.isArray(val)) {
         return (
           <div key={key} style={{ marginBottom: '15px', marginLeft: level * 10 }}>
@@ -76,62 +79,55 @@ export default function Onboarding() {
           </div>
         );
       }
-
       return (
         <div key={key} style={level === 0 ? styles.folder : { marginLeft: '12px', borderLeft: '1px solid #e2e8f0', paddingLeft: '12px', marginTop: '10px' }}>
-          <h3 style={level === 0 ? styles.folderTitle : styles.midTitle}>
-            {level === 0 ? key : key}
-          </h3>
+          <h3 style={level === 0 ? styles.folderTitle : styles.midTitle}>{key}</h3>
           {renderDNA(val, level + 1)}
         </div>
       );
     });
   };
 
-  if (loading) return <div style={styles.center}>Caricamento...</div>;
+  if (loading) return <div style={styles.center}>Caricamento profilo...</div>;
 
   return (
     <main style={styles.main}>
       <div style={step === 3 ? styles.cardLarge : styles.card}>
         {step === 1 && (
           <div style={styles.content}>
-            <h2 style={styles.title}>Dati base</h2>
-            <input style={styles.input} placeholder="Il tuo nome" value={firstName} onChange={e=>setFirstName(e.target.value)} />
+            <h2 style={styles.title}>Chi sei?</h2>
+            <input style={styles.input} placeholder="Nome" value={firstName} onChange={e=>setFirstName(e.target.value)} />
             <input style={styles.input} type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} />
             <select style={styles.input} value={city} onChange={e=>setCity(e.target.value)}>
-              <option value="">In quale provincia sei?</option>
+              <option value="">Provincia</option>
               {PROVINCE.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <button style={styles.button} onClick={() => setStep(2)}>Procedi</button>
+            <button style={styles.button} onClick={() => setStep(2)}>Continua</button>
           </div>
         )}
-
         {step === 2 && (
           <div style={{...styles.content, textAlign: 'center'}}>
-            <h2 style={styles.title}>Benvenuto in Circlo</h2>
-            <p style={styles.text}>Siamo studenti che credono nelle passioni comuni. Più tag scegli, più sarà facile trovare persone simili a te.</p>
-            <button style={styles.button} onClick={() => setStep(3)}>Configura DNA</button>
+            <h2 style={styles.title}>Circlo 🧬</h2>
+            <p style={styles.text}>Nato da studenti per studenti. Trova persone che vibrano sulla tua stessa frequenza.</p>
+            <button style={styles.button} onClick={() => setStep(3)}>Componi il tuo DNA</button>
           </div>
         )}
-
         {step === 3 && (
           <div style={styles.dnaLayout}>
             <div style={styles.searchHeader}>
-              <input style={styles.searchInput} placeholder="Cerca: 'Chopin', 'Thai', 'Nietzsche'..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
+              <input style={styles.searchInput} placeholder="Cerca passioni..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
               {results.length > 0 && (
                 <div style={styles.dropdown}>
-                  {results.map(r => <div key={r} onClick={()=>{toggleTag(r); setSearchTerm("");}} style={styles.dropItem}>{r} {selected.includes(r) ? '✅' : '+'}</div>)}
+                  {results.map(r => <div key={r} onClick={()=>{toggleTag(r); setSearchTerm("");}} style={styles.dropItem}>{r}</div>)}
                 </div>
               )}
             </div>
             <div style={styles.scrollArea}>
-               <div style={styles.badgeCount}>Interessi selezionati: {selected.length}</div>
-               {renderDNA(MEGA_CATALOGO)}
+              <div style={styles.badge}>Selezionati: {selected.length}</div>
+              {renderDNA(MEGA_CATALOGO)}
             </div>
             <div style={styles.footer}>
-              <button style={styles.saveBtn} onClick={handleSave} disabled={selected.length < 3}>
-                {saving ? "Salvataggio..." : `Salva e Continua`}
-              </button>
+              <button style={styles.saveBtn} onClick={handleSave} disabled={selected.length < 3}>{saving ? "Salvataggio..." : "Salva ed Entra"}</button>
             </div>
           </div>
         )}
@@ -141,33 +137,32 @@ export default function Onboarding() {
 }
 
 const getTagStyle = (s, t) => ({
-  padding: '8px 12px', borderRadius: '14px', fontSize: '13px', cursor: 'pointer', border: '1px solid #e2e8f0',
-  backgroundColor: s.includes(t) ? '#3b82f6' : '#fff', color: s.includes(t) ? '#fff' : '#475569', 
-  transition: '0.2s', fontWeight: '500'
+  padding: '8px 12px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer', border: '1px solid #e2e8f0',
+  backgroundColor: s.includes(t) ? '#3b82f6' : '#fff', color: s.includes(t) ? '#fff' : '#475569', transition: '0.2s'
 });
 
 const styles = {
-  main: { display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', backgroundColor:'#f1f5f9', padding:'15px', fontFamily:'-apple-system, BlinkMacSystemFont, sans-serif' },
+  main: { display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', backgroundColor:'#f8fafc', padding:'15px', fontFamily:'sans-serif' },
   card: { backgroundColor:'#fff', padding:'35px', borderRadius:'28px', width:'100%', maxWidth:'420px', boxShadow:'0 15px 35px rgba(0,0,0,0.05)' },
-  cardLarge: { backgroundColor:'#fff', borderRadius:'28px', width:'100%', maxWidth:'700px', height:'92vh', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 20px 40px rgba(0,0,0,0.08)' },
+  cardLarge: { backgroundColor:'#fff', borderRadius:'28px', width:'100%', maxWidth:'700px', height:'92vh', display:'flex', flexDirection:'column', overflow:'hidden' },
   content: { display:'flex', flexDirection:'column', gap:'20px' },
-  title: { fontSize:'26px', fontWeight:'900', textAlign:'center', color:'#1e293b' },
+  title: { fontSize:'26px', fontWeight:'900', textAlign:'center' },
   text: { color:'#64748b', lineHeight:'1.7', textAlign: 'center' },
-  input: { padding:'14px', borderRadius:'14px', border:'1px solid #cbd5e1', fontSize:'16px', outline: 'none' },
+  input: { padding:'14px', borderRadius:'14px', border:'1px solid #cbd5e1', outline: 'none' },
   button: { padding:'16px', backgroundColor:'#1e293b', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'bold', cursor:'pointer' },
   dnaLayout: { display:'flex', flexDirection:'column', height:'100%' },
-  searchHeader: { padding:'20px', borderBottom:'1px solid #f1f5f9', position:'relative', backgroundColor: '#fff' },
-  searchInput: { width:'100%', padding:'14px', borderRadius:'14px', border:'2px solid #e2e8f0', boxSizing:'border-box', outline:'none', fontSize: '15px' },
-  dropdown: { position:'absolute', top:'80px', left:'20px', right:'20px', backgroundColor:'#fff', zIndex:100, borderRadius:'16px', boxShadow:'0 10px 25px rgba(0,0,0,0.15)', maxHeight: '300px', overflowY: 'auto' },
-  dropItem: { padding:'14px', borderBottom:'1px solid #f8fafc', cursor:'pointer', fontWeight: '500' },
-  scrollArea: { flex:1, overflowY:'auto', padding:'25px', backgroundColor: '#fdfdfd' },
-  badgeCount: { backgroundColor: '#3b82f6', color: '#fff', padding: '6px 15px', borderRadius: '20px', display: 'inline-block', fontSize: '12px', fontWeight: 'bold', marginBottom: '20px' },
-  folder: { backgroundColor:'#fff', padding:'25px', borderRadius:'24px', marginBottom:'25px', border:'1px solid #f1f5f9', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' },
-  folderTitle: { fontSize:'22px', fontWeight:'800', marginBottom:'18px', color:'#0f172a' },
-  midTitle: { fontSize:'14px', fontWeight:'800', color:'#475569', marginTop:'15px', textTransform:'uppercase', letterSpacing: '0.05em' },
+  searchHeader: { padding:'20px', borderBottom:'1px solid #f1f5f9', position:'relative' },
+  searchInput: { width:'100%', padding:'14px', borderRadius:'14px', border:'2px solid #e2e8f0', boxSizing:'border-box', outline:'none' },
+  dropdown: { position:'absolute', top:'80px', left:'20px', right:'20px', backgroundColor:'#fff', zIndex:100, borderRadius:'16px', boxShadow:'0 10px 25px rgba(0,0,0,0.1)' },
+  dropItem: { padding:'14px', borderBottom:'1px solid #f8fafc', cursor:'pointer' },
+  scrollArea: { flex:1, overflowY:'auto', padding:'25px' },
+  badge: { backgroundColor: '#3b82f6', color: '#fff', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', display: 'inline-block', marginBottom: '20px' },
+  folder: { backgroundColor:'#fff', padding:'25px', borderRadius:'24px', marginBottom:'25px', border:'1px solid #f1f5f9' },
+  folderTitle: { fontSize:'22px', fontWeight:'800', marginBottom:'15px', color:'#1e293b' },
+  midTitle: { fontSize:'14px', fontWeight:'800', color:'#475569', marginTop:'15px', textTransform:'uppercase' },
   subLabel: { fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px' },
   tagGrid: { display:'flex', flexWrap:'wrap', gap:'10px' },
-  footer: { padding:'20px', borderTop:'1px solid #f1f5f9', backgroundColor: '#fff' },
-  saveBtn: { width:'100%', padding:'18px', backgroundColor:'#10b981', color:'#fff', border:'none', borderRadius:'16px', fontWeight:'bold', cursor:'pointer', fontSize: '16px' },
+  footer: { padding:'20px', borderTop:'1px solid #f1f5f9' },
+  saveBtn: { width:'100%', padding:'18px', backgroundColor:'#10b981', color:'#fff', border:'none', borderRadius:'16px', fontWeight:'bold', cursor:'pointer' },
   center: { display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', color:'#64748b' }
 };
