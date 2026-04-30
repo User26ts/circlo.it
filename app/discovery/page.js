@@ -33,112 +33,112 @@ export default function DiscoveryPremium() {
         .sort((a, b) => b.score - a.score);
 
         setMatches(processed);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     loadData();
   }, [router]);
 
-  const startConversation = async (targetId) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const ids = [session.user.id, targetId].sort();
-    
-    const { data: chat, error } = await supabase
-      .from('chats')
-      .upsert({ user_1: ids[0], user_2: ids[1] }, { onConflict: 'user_1, user_2' })
-      .select()
-      .single();
+  // FUNZIONE APERTURA CHAT PREMIUM (CORRETTA)
+  const openChat = async (targetId) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const myId = session.user.id;
+      const ids = [myId, targetId].sort(); // Ordine alfabetico degli UUID
 
-    if (error) return alert("Errore connessione: " + error.message);
-    router.push(`/chat/${chat.id}`);
+      // 1. Cerchiamo se la chat esiste già
+      let { data: existingChat } = await supabase
+        .from('chats')
+        .select('id')
+        .eq('user_1', ids[0])
+        .eq('user_2', ids[1])
+        .maybeSingle();
+
+      if (existingChat) {
+        router.push(`/chat/${existingChat.id}`);
+        return;
+      }
+
+      // 2. Se non esiste, la creiamo
+      const { data: newChat, error: createError } = await supabase
+        .from('chats')
+        .insert({ user_1: ids[0], user_2: ids[1] })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      router.push(`/chat/${newChat.id}`);
+
+    } catch (err) {
+      console.error("Errore apertura chat:", err);
+      alert("Non è stato possibile aprire la chat. Verifica di aver applicato lo script SQL.");
+    }
   };
 
-  if (loading) return (
-    <div style={styles.loaderContainer}>
-      <div style={styles.spinner}>🧬</div>
-      <p style={{fontWeight: '600', color: '#64748b'}}>Analizzando le affinità...</p>
-    </div>
-  );
+  const shareAction = () => {
+    const msg = `Vieni su Circlo! Cerchiamo persone simili a noi a ${myCity}. 🚀`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+  };
+
+  if (loading) return <div style={styles.center}>🧬 Caricamento...</div>;
 
   return (
     <main style={styles.main}>
-      <header style={styles.header}>
-        <h1 style={styles.mainTitle}>Scoperte a {myCity}</h1>
-        <p style={styles.subtitle}>Persone con cui potresti vibrare oggi</p>
-      </header>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Scoperte a {myCity}</h1>
+        <p style={styles.subtitle}>Connessioni basate sul DNA comune</p>
+      </div>
 
-      <section style={styles.scrollArea}>
-        {matches.length > 0 ? matches.map(m => (
-          <div key={m.id} style={styles.matchCard}>
-            <div style={styles.cardInfo}>
-              <div>
-                <h2 style={styles.userName}>{m.first_name}</h2>
-                <div style={styles.matchBadge}>🔥 {m.score} interessi comuni</div>
-              </div>
-              <div style={styles.avatarPlaceholder}>👤</div>
+      <div style={styles.list}>
+        {matches.map(m => (
+          <div key={m.id} style={styles.card}>
+            <div style={styles.cardTop}>
+              <h3 style={styles.cardName}>{m.first_name}</h3>
+              <span style={styles.scoreBadge}>🔥 {m.score} affinità</span>
             </div>
-            
-            <div style={styles.tagCloud}>
-              {m.commonTags.map(tag => (
-                <span key={tag} style={styles.tag}>#{tag}</span>
-              ))}
+            <div style={styles.tagWrap}>
+              {m.commonTags.map(t => <span key={t} style={styles.tag}>#{t}</span>)}
             </div>
-
-            <button style={styles.primaryAction} onClick={() => startConversation(m.id)}>
-              Inizia a parlare
-            </button>
+            <button onClick={() => openChat(m.id)} style={styles.btnChat}>Inizia a parlare</button>
           </div>
-        )) : (
-          <div style={styles.emptyState}>
-            <span style={{fontSize: '50px'}}>🚀</span>
-            <h3 style={{margin: '15px 0 5px 0'}}>Nessun match ancora</h3>
-            <p style={{color: '#94a3b8', fontSize: '14px'}}>Sei tra i primi pionieri di Circlo a {myCity}!</p>
+        ))}
+        {matches.length === 0 && (
+          <div style={styles.empty}>
+            <p>Sei il primo pioniere qui! 🚀</p>
           </div>
         )}
-      </section>
+      </div>
 
-      {/* FOOTER INVITO PREMIUM */}
-      <footer style={styles.inviteBar}>
-        <div style={styles.inviteCard}>
-          <div style={{flex: 1}}>
-            <p style={styles.inviteTitle}>Espandi il tuo cerchio</p>
-            <p style={styles.inviteSub}>Più siamo, più affinità troverai.</p>
+      {/* INVITO FISSO PREMIUM */}
+      <div style={styles.inviteFixed}>
+        <div style={styles.inviteInner}>
+          <div style={{flex:1}}>
+            <p style={styles.invTitle}>Fai crescere il cerchio</p>
+            <p style={styles.invSub}>Più siamo, più match avrai.</p>
           </div>
-          <button style={styles.inviteButton} onClick={() => {
-            const text = encodeURIComponent(`Ehi! Sto usando Circlo per conoscere persone con i miei stessi interessi a ${myCity}. Unisciti anche tu! 🚀`);
-            window.open(`https://wa.me/?text=${text}`);
-          }}>
-            Invita ora
-          </button>
+          <button onClick={shareAction} style={styles.invBtn}>Invita</button>
         </div>
-      </footer>
+      </div>
     </main>
   );
 }
 
 const styles = {
-  main: { backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: '-apple-system, system-ui, sans-serif', color: '#1e293b' },
-  header: { padding: '40px 20px 20px 20px', textAlign: 'center' },
-  mainTitle: { fontSize: '32px', fontWeight: '900', letterSpacing: '-0.5px', margin: 0 },
-  subtitle: { color: '#64748b', fontSize: '16px', marginTop: '5px' },
-  scrollArea: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '140px' },
-  matchCard: { backgroundColor: '#ffffff', borderRadius: '28px', padding: '25px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', border: '1px solid #f1f5f9' },
-  cardInfo: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  userName: { fontSize: '22px', fontWeight: '800', margin: 0 },
-  matchBadge: { color: '#10b981', fontWeight: '700', fontSize: '13px', marginTop: '4px' },
-  avatarPlaceholder: { width: '50px', height: '50px', borderRadius: '25px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' },
-  tagCloud: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '25px' },
-  tag: { padding: '6px 12px', backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
-  primaryAction: { width: '100%', padding: '16px', borderRadius: '18px', border: 'none', backgroundColor: '#0f172a', color: '#fff', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' },
-  emptyState: { textAlign: 'center', padding: '60px 20px', backgroundColor: '#fff', borderRadius: '30px', border: '2px dashed #e2e8f0' },
-  inviteBar: { position: 'fixed', bottom: '25px', left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 20px', zIndex: 100 },
-  inviteCard: { width: '100%', maxWidth: '450px', backgroundColor: '#ffffff', padding: '15px 20px', borderRadius: '24px', boxShadow: '0 15px 35px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px' },
-  inviteTitle: { fontSize: '15px', fontWeight: '800', margin: 0 },
-  inviteSub: { fontSize: '12px', color: '#64748b', margin: 0 },
-  inviteButton: { backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '14px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' },
-  loaderContainer: { height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' },
-  spinner: { fontSize: '40px', marginBottom: '10px' }
+  main: { backgroundColor: '#f0f4f8', minHeight: '100vh', padding: '40px 20px 140px 20px', fontFamily: 'sans-serif' },
+  header: { textAlign: 'center', marginBottom: '30px' },
+  title: { fontSize: '28px', fontWeight: '900', margin: 0, color: '#1a202c' },
+  subtitle: { color: '#718096', fontSize: '15px' },
+  list: { display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '500px', margin: '0 auto' },
+  card: { backgroundColor: '#fff', borderRadius: '24px', padding: '24px', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' },
+  cardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
+  cardName: { fontSize: '20px', fontWeight: '800', margin: 0 },
+  scoreBadge: { color: '#38a169', fontWeight: 'bold', fontSize: '13px' },
+  tagWrap: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' },
+  tag: { padding: '5px 12px', backgroundColor: '#ebf8ff', color: '#3182ce', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold' },
+  btnChat: { width: '100%', padding: '15px', borderRadius: '15px', border: 'none', backgroundColor: '#1a202c', color: '#fff', fontWeight: 'bold', cursor: 'pointer' },
+  inviteFixed: { position: 'fixed', bottom: '25px', left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 20px' },
+  inviteInner: { width: '100%', maxWidth: '460px', backgroundColor: '#fff', padding: '15px 20px', borderRadius: '22px', boxShadow: '0 15px 40px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0' },
+  invTitle: { margin: 0, fontWeight: '800', fontSize: '15px' },
+  invSub: { margin: 0, fontSize: '12px', color: '#718096' },
+  invBtn: { backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 'bold', marginLeft: '10px' },
+  center: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }
 };
