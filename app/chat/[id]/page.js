@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
@@ -15,31 +15,45 @@ export default function ChatPage() {
 
   useEffect(() => {
     async function initChat() {
+      // 1. Prendi la sessione
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      setMyId(session.user.id);
+      const currentUserId = session.user.id;
+      setMyId(currentUserId);
 
-      // Prendi il nome del destinatario
+      // 2. Prendi il nome del destinatario
       const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', receiver_id).single();
       if (profile) setReceiverName(profile.first_name);
 
-      // Carica messaggi esistenti
+      // 3. Carica messaggi esistenti
       const { data: existingMessages } = await supabase
         .from('messages')
         .select('*')
-        .or(`and(sender_id.eq.${session.user.id},receiver_id.eq.${receiver_id}),and(sender_id.eq.${receiver_id},receiver_id.eq.${session.user.id})`)
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${receiver_id}),and(sender_id.eq.${receiver_id},receiver_id.eq.${currentUserId})`)
         .order('created_at', { ascending: true });
 
       if (existingMessages) setMessages(existingMessages);
 
-      // Sottoscrizione REALTIME
+      // 4. Sottoscrizione REALTIME (Usa currentUserId invece di session.user.id dentro il callback)
       const channel = supabase
-        .channel('schema-db-changes')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        .channel(`chat_${receiver_id}`)
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages' 
+        }, (payload) => {
           const newMsg = payload.new;
-          if ((newMsg.sender_id === session.user.id && newMsg.receiver_id === receiver_id) ||
-              (newMsg.sender_id === receiver_id && newMsg.receiver_id === session.user.id)) {
-            setMessages(prev => [...prev, newMsg]);
+          // Verifica se il messaggio appartiene a questa conversazione
+          const isRelevant = 
+            (newMsg.sender_id === currentUserId && newMsg.receiver_id === receiver_id) ||
+            (newMsg.sender_id === receiver_id && newMsg.receiver_id === currentUserId);
+          
+          if (isRelevant) {
+            setMessages(prev => {
+              // Evita duplicati se il messaggio è già stato aggiunto ottimisticamente
+              if (prev.find(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
           }
         })
         .subscribe();
@@ -57,34 +71,36 @@ export default function ChatPage() {
     e.preventDefault();
     if (!newMessage.trim() || !myId) return;
 
-    const messageData = {
-      sender_id: myId,
-      receiver_id: receiver_id,
-      content: newMessage.trim()
-    };
-
-    // Reset immediato dell'input per velocità UI
-    const textToSend = newMessage;
+    const textToSend = newMessage.trim();
     setNewMessage("");
 
-    const { error } = await supabase.from('messages').insert([messageData]);
+    // Invio al DB
+    const { error } = await supabase.from('messages').insert([
+      { 
+        sender_id: myId, 
+        receiver_id: receiver_id, 
+        content: textToSend 
+      }
+    ]);
 
     if (error) {
       console.error("Errore invio:", error);
-      alert("Errore nell'invio del messaggio");
-      setNewMessage(textToSend); // Ripristina il testo se fallisce
+      alert("Errore: " + error.message);
+      setNewMessage(textToSend);
     }
   };
 
   return (
     <main style={styles.container}>
       <header style={styles.header}>
+        <div style={styles.backBtn} onClick={() => window.history.back()}>←</div>
         <h2 style={styles.title}>{receiverName}</h2>
+        <div style={{width: '24px'}} /> {/* Spacer per centrare il titolo */}
       </header>
 
       <div style={styles.messageList}>
-        {messages.map((msg) => (
-          <div key={msg.id} style={msg.sender_id === myId ? styles.myMsgWrapper : styles.theirMsgWrapper}>
+        {messages.map((msg, i) => (
+          <div key={msg.id || i} style={msg.sender_id === myId ? styles.myMsgWrapper : styles.theirMsgWrapper}>
             <div style={msg.sender_id === myId ? styles.myMsg : styles.theirMsg}>
               {msg.content}
             </div>
@@ -100,22 +116,25 @@ export default function ChatPage() {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
         />
-        <button type="submit" style={styles.sendBtn}>Invia</button>
+        <button type="submit" style={styles.sendBtn}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
       </form>
     </main>
   );
 }
 
 const styles = {
-  container: { height: '100vh', display: 'flex', flexDirection: 'column', background: '#050505', color: '#fff', fontFamily: 'sans-serif' },
-  header: { padding: '20px', borderBottom: '1px solid #1a1a1a', textAlign: 'center', background: '#0f0f0f' },
-  title: { fontSize: '18px', fontWeight: 'bold', margin: 0 },
-  messageList: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' },
-  myMsgWrapper: { alignSelf: 'flex-end', maxWidth: '80%' },
-  theirMsgWrapper: { alignSelf: 'flex-start', maxWidth: '80%' },
-  myMsg: { background: '#007AFF', color: '#fff', padding: '12px 16px', borderRadius: '18px 18px 4px 18px', fontSize: '15px' },
-  theirMsg: { background: '#222', color: '#fff', padding: '12px 16px', borderRadius: '18px 18px 18px 4px', fontSize: '15px' },
-  inputArea: { padding: '20px', background: '#0f0f0f', display: 'flex', gap: '10px', borderTop: '1px solid #1a1a1a' },
-  input: { flex: 1, background: '#1a1a1a', border: '1px solid #333', padding: '12px', borderRadius: '12px', color: '#fff', outline: 'none' },
-  sendBtn: { background: '#007AFF', color: '#fff', border: 'none', padding: '0 20px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
+  container: { height: '100vh', display: 'flex', flexDirection: 'column', background: '#000', color: '#fff', fontFamily: '-apple-system, system-ui, sans-serif' },
+  header: { padding: '15px 20px', borderBottom: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 10 },
+  backBtn: { fontSize: '20px', cursor: 'pointer', color: '#007AFF' },
+  title: { fontSize: '17px', fontWeight: '700', margin: 0 },
+  messageList: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' },
+  myMsgWrapper: { alignSelf: 'flex-end', maxWidth: '75%' },
+  theirMsgWrapper: { alignSelf: 'flex-start', maxWidth: '75%' },
+  myMsg: { background: '#007AFF', color: '#fff', padding: '10px 16px', borderRadius: '18px 18px 2px 18px', fontSize: '15px', lineHeight: '1.4' },
+  theirMsg: { background: '#1C1C1E', color: '#fff', padding: '10px 16px', borderRadius: '18px 18px 18px 2px', fontSize: '15px', lineHeight: '1.4' },
+  inputArea: { padding: '15px 20px 30px 20px', background: '#000', display: 'flex', gap: '12px', alignItems: 'center' },
+  input: { flex: 1, background: '#1C1C1E', border: 'none', padding: '12px 16px', borderRadius: '22px', color: '#fff', fontSize: '15px', outline: 'none' },
+  sendBtn: { background: 'none', border: 'none', color: '#007AFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
 };
