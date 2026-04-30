@@ -5,81 +5,100 @@ import { useParams, useRouter } from "next/navigation";
 
 const supabase = createClient("https://cuntsizxhdoenlmldkrp.supabase.co", "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK");
 
-export default function PremiumChat() {
-  const { id: chatId } = useParams();
-  const router = useRouter();
+export default function ChatPage() {
+  const { id: receiver_id } = useParams();
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState("");
+  const [newMessage, setNewMessage] = useState("");
   const [myId, setMyId] = useState(null);
-  const [partner, setPartner] = useState("Caricamento...");
+  const [receiverName, setReceiverName] = useState("Chat");
   const scrollRef = useRef();
 
   useEffect(() => {
-    async function init() {
+    async function initChat() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return router.push("/");
+      if (!session) return;
       setMyId(session.user.id);
 
-      const { data: history } = await supabase.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
-      setMessages(history || []);
+      // Prendi il nome del destinatario
+      const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', receiver_id).single();
+      if (profile) setReceiverName(profile.first_name);
 
-      const { data: chatInfo } = await supabase.from('chats').select('user_1, user_2').eq('id', chatId).single();
-      if (chatInfo) {
-        const otherId = chatInfo.user_1 === session.user.id ? chatInfo.user_2 : chatInfo.user_1;
-        const { data: p } = await supabase.from('profiles').select('first_name').eq('id', otherId).single();
-        setPartner(p?.first_name || "Utente Circlo");
-      }
+      // Carica messaggi esistenti
+      const { data: existingMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${session.user.id},receiver_id.eq.${receiver_id}),and(sender_id.eq.${receiver_id},receiver_id.eq.${session.user.id})`)
+        .order('created_at', { ascending: true });
 
-      const channel = supabase.channel(`room:${chatId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload) => {
-          setMessages(prev => [...prev, payload.new]);
+      if (existingMessages) setMessages(existingMessages);
+
+      // Sottoscrizione REALTIME
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          const newMsg = payload.new;
+          if ((newMsg.sender_id === session.user.id && newMsg.receiver_id === receiver_id) ||
+              (newMsg.sender_id === receiver_id && newMsg.receiver_id === session.user.id)) {
+            setMessages(prev => [...prev, newMsg]);
+          }
         })
         .subscribe();
 
       return () => supabase.removeChannel(channel);
     }
-    init();
-  }, [chatId, router]);
+    initChat();
+  }, [receiver_id]);
 
-  useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
-    const { error } = await supabase.from('messages').insert({ chat_id: chatId, sender_id: myId, content: inputText.trim() });
-    if (!error) setInputText("");
+    if (!newMessage.trim() || !myId) return;
+
+    const messageData = {
+      sender_id: myId,
+      receiver_id: receiver_id,
+      content: newMessage.trim()
+    };
+
+    // Reset immediato dell'input per velocità UI
+    const textToSend = newMessage;
+    setNewMessage("");
+
+    const { error } = await supabase.from('messages').insert([messageData]);
+
+    if (error) {
+      console.error("Errore invio:", error);
+      alert("Errore nell'invio del messaggio");
+      setNewMessage(textToSend); // Ripristina il testo se fallisce
+    }
   };
 
   return (
     <main style={styles.container}>
       <header style={styles.header}>
-        <button style={styles.backBtn} onClick={() => router.push('/discovery')}>←</button>
-        <div style={styles.headerUser}>
-          <div style={styles.headerAvatar}>👤</div>
-          <div>
-            <h3 style={styles.headerName}>{partner}</h3>
-            <p style={styles.headerStatus}>Nel tuo cerchio</p>
-          </div>
-        </div>
+        <h2 style={styles.title}>{receiverName}</h2>
       </header>
 
-      <div style={styles.messagesArea}>
-        {messages.map((m, idx) => (
-          <div key={idx} style={m.sender_id === myId ? styles.rowRight : styles.rowLeft}>
-            <div style={m.sender_id === myId ? styles.bubbleMine : styles.bubbleTheirs}>
-              {m.content}
+      <div style={styles.messageList}>
+        {messages.map((msg) => (
+          <div key={msg.id} style={msg.sender_id === myId ? styles.myMsgWrapper : styles.theirMsgWrapper}>
+            <div style={msg.sender_id === myId ? styles.myMsg : styles.theirMsg}>
+              {msg.content}
             </div>
           </div>
         ))}
         <div ref={scrollRef} />
       </div>
 
-      <form style={styles.inputForm} onSubmit={sendMessage}>
-        <input 
-          style={styles.input} 
-          placeholder="Scrivi un messaggio..." 
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+      <form onSubmit={sendMessage} style={styles.inputArea}>
+        <input
+          style={styles.input}
+          placeholder="Scrivi un messaggio..."
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
         />
         <button type="submit" style={styles.sendBtn}>Invia</button>
       </form>
@@ -88,19 +107,15 @@ export default function PremiumChat() {
 }
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc', maxWidth: '600px', margin: '0 auto', fontFamily: '-apple-system, system-ui, sans-serif' },
-  header: { padding: '15px 20px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '15px', position: 'sticky', top: 0, zIndex: 10 },
-  backBtn: { border: 'none', background: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' },
-  headerUser: { display: 'flex', alignItems: 'center', gap: '12px' },
-  headerAvatar: { width: '40px', height: '40px', borderRadius: '20px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' },
-  headerName: { margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' },
-  headerStatus: { margin: 0, fontSize: '12px', color: '#10b981', fontWeight: '600' },
-  messagesArea: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' },
-  rowRight: { display: 'flex', justifyContent: 'flex-end' },
-  rowLeft: { display: 'flex', justifyContent: 'flex-start' },
-  bubbleMine: { backgroundColor: '#3b82f6', color: '#fff', padding: '12px 16px', borderRadius: '20px 20px 4px 20px', maxWidth: '75%', fontSize: '15px', boxShadow: '0 4px 10px rgba(59,130,246,0.15)', lineHeight: '1.4' },
-  bubbleTheirs: { backgroundColor: '#fff', color: '#334155', padding: '12px 16px', borderRadius: '20px 20px 20px 4px', maxWidth: '75%', fontSize: '15px', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', lineHeight: '1.4' },
-  inputForm: { padding: '15px 20px', backgroundColor: '#fff', display: 'flex', gap: '12px', borderTop: '1px solid #e2e8f0' },
-  input: { flex: 1, padding: '14px 20px', borderRadius: '24px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', outline: 'none', fontSize: '15px', color: '#0f172a' },
-  sendBtn: { backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '0 20px', borderRadius: '24px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }
+  container: { height: '100vh', display: 'flex', flexDirection: 'column', background: '#050505', color: '#fff', fontFamily: 'sans-serif' },
+  header: { padding: '20px', borderBottom: '1px solid #1a1a1a', textAlign: 'center', background: '#0f0f0f' },
+  title: { fontSize: '18px', fontWeight: 'bold', margin: 0 },
+  messageList: { flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' },
+  myMsgWrapper: { alignSelf: 'flex-end', maxWidth: '80%' },
+  theirMsgWrapper: { alignSelf: 'flex-start', maxWidth: '80%' },
+  myMsg: { background: '#007AFF', color: '#fff', padding: '12px 16px', borderRadius: '18px 18px 4px 18px', fontSize: '15px' },
+  theirMsg: { background: '#222', color: '#fff', padding: '12px 16px', borderRadius: '18px 18px 18px 4px', fontSize: '15px' },
+  inputArea: { padding: '20px', background: '#0f0f0f', display: 'flex', gap: '10px', borderTop: '1px solid #1a1a1a' },
+  input: { flex: 1, background: '#1a1a1a', border: '1px solid #333', padding: '12px', borderRadius: '12px', color: '#fff', outline: 'none' },
+  sendBtn: { background: '#007AFF', color: '#fff', border: 'none', padding: '0 20px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
 };
