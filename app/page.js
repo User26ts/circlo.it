@@ -1,7 +1,48 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from 'next/link';
+import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+
+const supabase = createClient(
+  "https://cuntsizxhdoenlmldkrp.supabase.co", 
+  "sb_publishable_Snz15uB3yB77q13OuN6oIA_laubStQK"
+);
 
 export default function Home() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const checkRedirect = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        // Controlliamo lo stato del profilo nel DB
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('setup_finished')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile?.setup_finished) {
+          router.push("/dashboard"); // Già pronto, vai alla home vera
+        } else {
+          router.push("/onboarding"); // Deve ancora finire il DNA
+        }
+      } else {
+        setChecking(false); // Non loggato, resta sulla landing
+      }
+    };
+
+    checkRedirect();
+  }, [router]);
+
+  // Mentre controlla lo stato, mostriamo uno sfondo neutro per evitare "flash" bianchi
+  if (checking) {
+    return <main style={{...styles.container, background: '#f0f4f8'}}></main>;
+  }
+
   return (
     <main style={styles.container}>
       <div style={styles.aurora}></div>
@@ -11,13 +52,11 @@ export default function Home() {
         <p style={styles.tagline}>Incontra persone che ti somigliano davvero.</p>
 
         <div style={styles.buttonContainer}>
-          {/* Punta a mode=login */}
           <Link href="/auth?mode=login" style={styles.blueButton}>
             <span style={styles.glossHighlight}></span>
             ACCEDI
           </Link>
 
-          {/* Punta a mode=signup */}
           <Link href="/auth?mode=signup" style={styles.whiteButton}>
             <span style={styles.whiteGlossHighlight}></span>
             REGISTRATI
@@ -28,13 +67,13 @@ export default function Home() {
   );
 }
 
+// Manteniamo i tuoi stili originali che sono ottimi
 const styles = {
   container: {
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    // Colore "nebbia" più equilibrato
     background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
     fontFamily: '"Segoe UI", system-ui, sans-serif',
     overflow: 'hidden',
